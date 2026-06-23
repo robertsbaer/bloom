@@ -206,7 +206,7 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <img
-            src="/bloom__horizontal_color.png"
+            src={`${import.meta.env.BASE_URL}bloom__horizontal_color.png`}
             alt="Bloom 5.5"
             className="h-12 w-auto flex-shrink-0"
           />
@@ -496,7 +496,7 @@ export default function App() {
                     }}
                   />
                   <img
-                    src="/bloom__social_full_whitebg.png"
+                    src={`${import.meta.env.BASE_URL}bloom__social_full_whitebg.png`}
                     alt="Bloom 5.5"
                     className="relative w-full h-full object-contain"
                     style={{
@@ -545,7 +545,7 @@ export default function App() {
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="relative">
               <img
-                src="/images/products/Desert_Bloom_Body_Butter.png"
+                src={`${import.meta.env.BASE_URL}images/products/Desert_Bloom_Body_Butter.png`}
                 alt="Small-batch crafted skincare"
                 className="rounded-2xl w-full object-cover shadow-xl"
                 style={{ height: "460px" }}
@@ -1054,7 +1054,7 @@ export default function App() {
           <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
             <div className="relative">
               <img
-                src="/images/products/Desert_Sage_Beard_Balm.png"
+                src={`${import.meta.env.BASE_URL}images/products/Desert_Sage_Beard_Balm.png`}
                 alt="Prickly Pear Seed Oil"
                 className="rounded-2xl w-full object-cover shadow-xl"
                 style={{ height: "420px" }}
@@ -1324,7 +1324,7 @@ export default function App() {
             {/* Brand */}
             <div className="md:col-span-1">
               <img
-                src="/bloom__social_full_whitebg.png"
+                src={`${import.meta.env.BASE_URL}bloom__social_full_whitebg.png`}
                 alt="Bloom 5.5"
                 className="h-14 w-auto mb-4"
                 style={{ filter: "brightness(0) invert(1)", opacity: 0.9 }}

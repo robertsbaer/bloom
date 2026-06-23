@@ -78,7 +78,7 @@ export default function WholesalePage() {
               <span className="hidden sm:inline" style={{ letterSpacing: '0.04em' }}>Back to Store</span>
             </Link>
             <div className="w-px h-5" style={{ backgroundColor: '#e0d8cc' }} />
-            <img src="/bloom__social_full_whitebg.png" alt="Bloom 5.5" className="h-9 w-auto" />
+            <img src={`${import.meta.env.BASE_URL}bloom__social_full_whitebg.png`} alt="Bloom 5.5" className="h-9 w-auto" />
           </div>
 
           <div className="hidden md:flex items-center gap-3">
