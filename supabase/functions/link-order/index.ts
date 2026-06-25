@@ -4,6 +4,7 @@ const ALLOWED_ORIGINS = [
   "https://robertsbaer.github.io",
   "http://localhost:5173",
   "http://localhost:4173",
+  "http://mybloom55.com",
 ];
 
 function corsHeaders(origin: string | null) {
