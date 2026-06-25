@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { createClient } from "@supabase/supabase-js";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "./supabase";
+import { User } from "@supabase/supabase-js";
 import Checkout from "./Checkout";
 import {
   ShoppingCart,
@@ -19,11 +20,6 @@ import {
   type Product,
   type SectionTab,
 } from "./data";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
 
 interface CartItem {
   id: string;
@@ -82,6 +78,28 @@ export default function App() {
   });
   const [reportSent, setReportSent] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    fetchUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Email popup
   const [popupOpen, setPopupOpen] = useState(false);
@@ -235,6 +253,46 @@ export default function App() {
             >
               Wholesale
             </Link>
+            {user ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#a07840")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "#6b5c45")
+                  }
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => supabase.auth.signOut()}
+                  className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#a07840")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "#6b5c45")
+                  }
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+                style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#a07840")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b5c45")}
+              >
+                Login
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -370,6 +428,37 @@ export default function App() {
             >
               Wholesale
             </Link>
+            {user ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="text-sm uppercase font-sans"
+                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    supabase.auth.signOut();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-sm uppercase font-sans"
+                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="text-sm uppercase font-sans"
+                style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Login
+              </Link>
+            )}
           </div>
         )}
       </header>
@@ -390,14 +479,14 @@ export default function App() {
                 transform: "translate(20%, -20%)",
               }}
             />
-            <div
-              className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full opacity-8 pointer-events-none"
+            {/* <div
+              className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full opacity-11 pointer-events-none"
               style={{
                 background:
                   "radial-gradient(circle, #8aaa8c 0%, transparent 70%)",
                 transform: "translateY(30%)",
               }}
-            />
+            /> */}
 
             <div className="relative px-8 md:px-14 py-10 md:py-12 flex flex-col md:flex-row md:items-center gap-8 w-full">
               <div className="flex-1">
@@ -489,21 +578,11 @@ export default function App() {
               </div>
 
               <div className="flex-shrink-0 hidden md:flex items-center justify-center">
-                <div className="relative w-44 h-44 lg:w-56 lg:h-56">
-                  <div
-                    className="absolute inset-0 rounded-full opacity-20"
-                    style={{
-                      background:
-                        "radial-gradient(circle, #c9a84c 0%, transparent 70%)",
-                    }}
-                  />
+                <div className="relative w-80 h-80 lg:w-96 lg:h-96">
                   <img
-                    src={`${import.meta.env.BASE_URL}bloom__social_full_whitebg.png`}
-                    alt="Bloom 5.5"
-                    className="relative w-full h-full object-contain"
-                    style={{
-                      filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.3))",
-                    }}
+                    src={`${import.meta.env.BASE_URL}Product_Line.png`}
+                    alt="Prickly Pear Plants"
+                    className="absolute inset-0 w-full h-full object-contain rounded-tl-3xl rounded-br-3xl"
                   />
                 </div>
               </div>
@@ -1044,10 +1123,10 @@ export default function App() {
           <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
             <div className="relative">
               <img
-                src={`${import.meta.env.BASE_URL}images/products/Desert_Sage_Beard_Balm.png`}
+                src={`${import.meta.env.BASE_URL}public/Prickly_Pear_Plants.png`}
                 alt="Prickly Pear Seed Oil"
                 className="rounded-2xl w-full object-cover shadow-xl"
-                style={{ height: "420px" }}
+                style={{ height: "420px", opacity: 0.9 }}
               />
               <div
                 className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -1220,89 +1299,6 @@ export default function App() {
               Follow along for updates, skincare tips, and community highlights
               from the Bloom 5.5 family.
             </p>
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-6 mb-10">
-            {[
-              {
-                platform: "Instagram",
-                handle: "@mybloom55",
-                cta: "Follow on Instagram",
-                url: "https://www.instagram.com/mybloom55",
-                color: "#7a4a2a",
-              },
-              {
-                platform: "TikTok",
-                handle: "@mybloom55",
-                cta: "Follow on TikTok",
-                url: "https://www.tiktok.com/@mybloom55",
-                color: "#1e3a20",
-              },
-              {
-                platform: "Facebook",
-                handle: "Bloom 5.5",
-                cta: "Join on Facebook",
-                url: "https://www.facebook.com/mybloom55",
-                color: "#2a3a4a",
-              },
-            ].map(({ platform, handle, cta, url, color }) => (
-              <a
-                key={platform}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl p-7 flex flex-col gap-3 transition-all duration-200 group"
-                style={{
-                  backgroundColor: "#fff",
-                  border: "1px solid #ede7db",
-                  boxShadow: "0 2px 12px rgba(30,58,32,0.05)",
-                  textDecoration: "none",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.boxShadow =
-                    "0 8px 32px rgba(30,58,32,0.12)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.boxShadow =
-                    "0 2px 12px rgba(30,58,32,0.05)")
-                }
-              >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: color }}
-                >
-                  <span
-                    className="text-xs font-sans font-bold"
-                    style={{ color: "#fff" }}
-                  >
-                    {platform[0]}
-                  </span>
-                </div>
-                <div>
-                  <p
-                    className="font-semibold mb-1"
-                    style={{ color: "#1e2d1f" }}
-                  >
-                    {platform}
-                  </p>
-                  <p className="text-sm font-sans" style={{ color: "#9c8870" }}>
-                    {handle}
-                  </p>
-                </div>
-                <span
-                  className="text-xs font-sans mt-auto flex items-center gap-1 transition-colors"
-                  style={{ color: "#a07840" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.color = "#1e3a20")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.color = "#a07840")
-                  }
-                >
-                  {cta} <ChevronRight size={12} />
-                </span>
-              </a>
-            ))}
           </div>
         </div>
       </section>

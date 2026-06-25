@@ -339,6 +339,31 @@ Deno.serve(async (req) => {
     })
     .eq("id", orderRow.id);
 
+  // ── Find user and link to order if they exist ───────────────────
+  const { data: existingUsers, error: listError } =
+    await supabase.auth.admin.listUsers({
+      email: normalizedEmail,
+    });
+
+  let newUser = true;
+  if (listError) {
+    console.error(
+      `Could not list users to find existing user: ${listError.message}`,
+    );
+  } else if (existingUsers?.users?.[0]) {
+    const userId = existingUsers.users[0].id;
+    newUser = false;
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({ user_id: userId })
+      .eq("id", orderRow.id);
+    if (updateError) {
+      console.error(
+        `Failed to link order ${orderRow.id} to user ${userId}: ${updateError.message}`,
+      );
+    }
+  }
+
   return json(
     {
       orderId: orderRow.id,
@@ -348,6 +373,7 @@ Deno.serve(async (req) => {
       subtotalCents,
       totalCents,
       receiptUrl: payment.receipt_url ?? null,
+      newUser,
     },
     200,
     origin,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, Lock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 // Minimal shape of the Square Web SDK we use. The full SDK has no official types.
@@ -107,6 +108,7 @@ export default function Checkout({
   cartTotal,
   onSuccess,
 }: CheckoutProps) {
+  const navigate = useNavigate();
   const [step, setStep] = useState<"info" | "payment" | "success">("info");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -301,8 +303,17 @@ export default function Checkout({
         orderId: data.orderId,
         receiptUrl: data.receiptUrl ?? null,
       });
-      setStep("success");
-      onSuccess({ orderId: data.orderId, receiptUrl: data.receiptUrl ?? null });
+
+      if (data.newUser) {
+        sessionStorage.setItem("pendingOrderId", data.orderId);
+        navigate(`/create-account?email=${encodeURIComponent(email)}`);
+      } else {
+        setStep("success");
+        onSuccess({
+          orderId: data.orderId,
+          receiptUrl: data.receiptUrl ?? null,
+        });
+      }
     } catch (err: unknown) {
       setErrorMsg(
         err instanceof Error
