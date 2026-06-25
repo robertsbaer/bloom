@@ -193,6 +193,9 @@ export default function App() {
     await supabase
       .from("email_signups")
       .insert({ email: popupEmail, source: "popup_10off" });
+    await supabase.functions.invoke("send-smtp-email", {
+      body: { email: popupEmail },
+    });
     setPopupSubmitting(false);
     setPopupSent(true);
     localStorage.setItem("bloom55_popup_seen", "1");
