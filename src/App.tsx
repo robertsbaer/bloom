@@ -1023,7 +1023,7 @@ export default function App() {
                 text: "Small-batch crafted in Edgewater, Maryland to ensure superior quality and preserve the freshness of our formulas.",
                 icon: (
                   <img
-                    src="/bloom/public/images/icons/hand-heart.png"
+                    src={`${import.meta.env.BASE_URL}images/icons/hand-heart.png`}
                     alt="Clean & Transparent"
                   />
                 ),
@@ -1123,7 +1123,7 @@ export default function App() {
           <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
             <div className="relative">
               <img
-                src={`${import.meta.env.BASE_URL}public/Prickly_Pear_Plants.png`}
+                src={`${import.meta.env.BASE_URL}Prickly_Pear_Plants.png`}
                 alt="Prickly Pear Seed Oil"
                 className="rounded-2xl w-full object-cover shadow-xl"
                 style={{ height: "420px", opacity: 0.9 }}
