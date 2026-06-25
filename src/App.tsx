@@ -2783,6 +2783,20 @@ export default function App() {
           setCartItems([]);
         }}
       />
+
+      <footer className="text-center py-4">
+        <p className="text-xs font-sans" style={{ color: "#9c8870" }}>
+          Website by{" "}
+          <a
+            href="https://dcmademedia.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            DC Made Media
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
