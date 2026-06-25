@@ -28,6 +28,7 @@ function json(body: unknown, status: number, origin: string | null) {
 }
 
 serve(async (req) => {
+  console.log("Function invoked");
   const origin = req.headers.get("origin");
 
   if (req.method === "OPTIONS") {
@@ -38,18 +39,19 @@ serve(async (req) => {
   }
 
   const { email } = await req.json();
+  console.log(`Email received: ${email}`);
   if (!email) {
     return json({ error: "Missing email" }, 400, origin);
   }
 
   try {
     const client = new SmtpClient();
-    
+
     await client.connectTLS({
-        hostname: Deno.env.get("SMTP_HOST")!,
-        port: Number(Deno.env.get("SMTP_PORT"))!,
-        username: Deno.env.get("SMTP_USER")!,
-        password: Deno.env.get("SMTP_PASS")!,
+      hostname: Deno.env.get("SMTP_HOST")!,
+      port: Number(Deno.env.get("SMTP_PORT"))!,
+      username: Deno.env.get("SMTP_USER")!,
+      password: Deno.env.get("SMTP_PASS")!,
     });
 
     await client.send({
@@ -66,6 +68,11 @@ serve(async (req) => {
 
     return json({ success: true }, 200, origin);
   } catch (error) {
-    return json({ error: `Failed to send email: ${error.message}` }, 500, origin);
+    console.error("Error sending email:", error);
+    return json(
+      { error: `Failed to send email: ${error.message}` },
+      500,
+      origin,
+    );
   }
 });
