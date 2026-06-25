@@ -1797,7 +1797,7 @@ export default function App() {
                         const body = encodeURIComponent(
                           `Name: ${contactForm.name}\nEmail: ${contactForm.email}\nReason: ${contactForm.reason}\n\n${contactForm.message}`,
                         );
-                        window.location.href = `mailto:tbnaturals.cs@gmail.com?subject=${subject}&body=${body}`;
+                        window.location.href = `mailto:admin@mybloom55.com?subject=${subject}&body=${body}`;
                         setContactSent(true);
                       }}
                       className="space-y-4"
