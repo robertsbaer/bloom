@@ -185,8 +185,7 @@ Deno.serve(async (req) => {
   const { count: paidCount, error: countErr } = await supabase
     .from("orders")
     .select("id", { count: "exact", head: true })
-    .neq("status", "failed") // any non-failed order counts
-    .neq("status", "pending")
+    .in("status", ["New Order", "Packed", "Shipped", "Completed"])
     .ilike("email", normalizedEmail);
 
   if (countErr) {
