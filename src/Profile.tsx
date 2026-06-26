@@ -14,6 +14,11 @@ export default function Profile() {
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resetStatus, setResetStatus] = useState<{
+    submitting: boolean;
+    message: string;
+    error: string;
+  }>({ submitting: false, message: "", error: "" });
 
   const fetchOrders = useCallback(async (user: User) => {
     setLoading(true);
@@ -120,19 +125,46 @@ export default function Profile() {
           )}
         </div>
 
-        <div className="mb-10 text-center">
+        <div className="mb-10 text-center space-y-4">
           <button
             onClick={async () => {
               if (user) {
-                await supabase.auth.resetPasswordForEmail(user.email!);
-                alert("A password reset link has been sent to your email.");
+                setResetStatus({ submitting: true, message: "", error: "" });
+                const { error } = await supabase.auth.resetPasswordForEmail(
+                  user.email!,
+                );
+                if (error) {
+                  setResetStatus({
+                    submitting: false,
+                    message: "",
+                    error: `Error: ${error.message}`,
+                  });
+                } else {
+                  setResetStatus({
+                    submitting: false,
+                    message:
+                      "A password reset link has been sent to your email.",
+                    error: "",
+                  });
+                }
               }
             }}
-            className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+            disabled={resetStatus.submitting}
+            className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap disabled:opacity-50"
             style={{ color: "#a07840", letterSpacing: "0.1em" }}
           >
-            Reset Password
+            {resetStatus.submitting ? "Sending..." : "Reset Password"}
           </button>
+          {resetStatus.message && (
+            <p className="text-sm text-green-700 font-sans">
+              {resetStatus.message}
+            </p>
+          )}
+          {resetStatus.error && (
+            <p className="text-sm text-red-700 font-sans">
+              {resetStatus.error}
+            </p>
+          )}
         </div>
 
         <h2
