@@ -1,24 +1,15 @@
-import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
-import { SmtpClient } from "https://deno.land/x/smtp/mod.ts";
+// @ts-nocheck — This file runs on Deno (Supabase Edge Runtime).
+// Deno provides its own types at runtime; the editor's TS server uses Node typings.
+// Send an email via SMTP. Required secrets:
+//   SMTP_HOST
+//   SMTP_PORT
+//   SMTP_USER
+//   SMTP_PASS
+//   SMTP_FROM
 
-const ALLOWED_ORIGINS = [
-  "https://robertsbaer.github.io",
-  "http://localhost:5173",
-  "http://localhost:4173",
-  "https://mybloom55.com",
-];
-
-function corsHeaders(origin: string | null) {
-  const allow =
-    origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allow,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-    Vary: "Origin",
-  };
-}
+import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
+import { corsHeaders } from "./cors.ts";
+import * as template from "./template.ts";
 
 function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), {
@@ -27,8 +18,7 @@ function json(body: unknown, status: number, origin: string | null) {
   });
 }
 
-serve(async (req) => {
-  console.log("Function invoked");
+Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
 
   if (req.method === "OPTIONS") {
@@ -38,39 +28,50 @@ serve(async (req) => {
     return json({ error: "Method not allowed" }, 405, origin);
   }
 
-  const { email } = await req.json();
-  console.log(`Email received: ${email}`);
-  if (!email) {
-    return json({ error: "Missing email" }, 400, origin);
+  let body: {
+    to: string;
+    name: string;
+    orderId: string;
+    total: string;
+    items: string;
+    shippingAddress: string;
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "Invalid JSON" }, 400, origin);
   }
 
-  try {
-    const client = new SmtpClient();
+  const { to, name, orderId, total, items, shippingAddress } = body ?? {};
+  if (!to || !name || !orderId || !total || !items || !shippingAddress) {
+    return json({ error: "Missing required fields" }, 400, origin);
+  }
 
-    await client.connectTLS({
+  const client = new SMTPClient({
+    connection: {
       hostname: Deno.env.get("SMTP_HOST")!,
-      port: Number(Deno.env.get("SMTP_PORT"))!,
-      username: Deno.env.get("SMTP_USER")!,
-      password: Deno.env.get("SMTP_PASS")!,
-    });
+      port: parseInt(Deno.env.get("SMTP_PORT")!, 10),
+      tls: true,
+      auth: {
+        username: Deno.env.get("SMTP_USER")!,
+        password: Deno.env.get("SMTP_PASS")!,
+      },
+    },
+  });
 
+  try {
     await client.send({
-      from: Deno.env.get("SMTP_FROM_EMAIL")!,
-      to: email,
-      subject: "Your 10% Discount from Bloom 5.5!",
-      html: `
-        <h1>Welcome to Bloom 5.5!</h1>
-        <p>Thank you for signing up. Use the code <strong>FIRST10</strong> at checkout to receive 10% off your first order.</p>
-      `,
+      from: Deno.env.get("SMTP_FROM")!,
+      to,
+      subject: `Your Bloom 5.5 order #${orderId.slice(0, 8)} is confirmed`,
+      content: template.text({ orderId, name, total, items, shippingAddress }),
+      html: template.html({ orderId, name, total, items, shippingAddress }),
     });
-
     await client.close();
-
-    return json({ success: true }, 200, origin);
-  } catch (error) {
-    console.error("Error sending email:", error);
+    return json({ ok: true }, 200, origin);
+  } catch (err) {
     return json(
-      { error: `Failed to send email: ${error.message}` },
+      { error: "Failed to send email", detail: err.message },
       500,
       origin,
     );

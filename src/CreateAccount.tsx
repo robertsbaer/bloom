@@ -20,6 +20,7 @@ export default function CreateAccount() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPostPurchase, setIsPostPurchase] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -28,6 +29,9 @@ export default function CreateAccount() {
     const emailFromQuery = query.get("email");
     if (emailFromQuery) {
       setEmail(emailFromQuery);
+    }
+    if (sessionStorage.getItem("pendingOrderId")) {
+      setIsPostPurchase(true);
     }
   }, [query]);
 
@@ -80,10 +84,12 @@ export default function CreateAccount() {
       <div className="max-w-md w-full p-8 space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-serif" style={{ color: "#1e3a20" }}>
-            Create Your Account
+            {isPostPurchase ? "One Last Step!" : "Create Your Account"}
           </h1>
           <p className="text-sm font-sans mt-2" style={{ color: "#6b5c45" }}>
-            Complete your purchase by creating an account.
+            {isPostPurchase
+              ? "Create an account to save your order details and track your shipment."
+              : "Join the Bloom 5.5 family and start your journey to radiant skin."}
           </p>
         </div>
         <form className="space-y-4" onSubmit={handleSignUp}>

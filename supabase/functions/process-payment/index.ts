@@ -365,6 +365,29 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ── Send confirmation email ───────────────────────────────────────
+  try {
+    await supabase.functions.invoke("send-smtp-email", {
+      body: {
+        to: normalizedEmail,
+        name: shipping.name,
+        orderId: orderRow.id,
+        total: `$${(totalCents / 100).toFixed(2)}`,
+        items: lineItems
+          .map(
+            (i) =>
+              `<li>${i.quantity}x ${i.product_name} (${i.size_label}) - $${(
+                i.line_total_cents / 100
+              ).toFixed(2)}</li>`,
+          )
+          .join(""),
+        shippingAddress: `${shipping.name}<br>${shipping.address1}${shipping.address2 ? `<br>${shipping.address2}` : ""}<br>${shipping.city}, ${shipping.state} ${shipping.postalCode}`,
+      },
+    });
+  } catch (err) {
+    console.error(`Failed to send email for order ${orderRow.id}: ${err.message}`);
+  }
+
   return json(
     {
       orderId: orderRow.id,
