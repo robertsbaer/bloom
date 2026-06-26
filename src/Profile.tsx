@@ -139,6 +139,7 @@ export default function Profile() {
                     message: "",
                     error: `Error: ${error.message}`,
                   });
+                  console.error("Password Reset Error:", error);
                 } else {
                   setResetStatus({
                     submitting: false,
