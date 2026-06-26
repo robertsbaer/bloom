@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { useNavigate } from "react-router-dom";
 
+type OrderStatus =
+  | "New Order"
+  | "Packed"
+  | "Shipped"
+  | "Completed"
+  | "Refunded";
+
 interface Order {
   id: string;
   created_at: string;
@@ -13,9 +20,17 @@ interface Order {
   ship_state: string;
   ship_postal_code: string;
   total_cents: number;
-  status: string;
+  status: OrderStatus;
   square_receipt_url: string | null;
 }
+
+const statusColors: Record<OrderStatus, string> = {
+  "New Order": "bg-blue-100 text-blue-800",
+  Packed: "bg-yellow-100 text-yellow-800",
+  Shipped: "bg-purple-100 text-purple-800",
+  Completed: "bg-green-100 text-green-800",
+  Refunded: "bg-red-100 text-red-800",
+};
 
 export default function Admin() {
   const [loading, setLoading] = useState(true);
@@ -23,6 +38,22 @@ export default function Admin() {
   const [adminCheckCompleted, setAdminCheckCompleted] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const navigate = useNavigate();
+
+  async function updateOrderStatus(orderId: string, status: OrderStatus) {
+    const { error } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", orderId);
+
+    if (error) {
+      console.error("Error updating order status:", error);
+      return;
+    }
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
+    );
+  }
 
   useEffect(() => {
     const checkAdminAndFetchOrders = async () => {
@@ -166,15 +197,22 @@ export default function Admin() {
                       ${(order.total_cents / 100).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          order.status === "paid"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
+                      <select
+                        value={order.status}
+                        onChange={(e) =>
+                          updateOrderStatus(
+                            order.id,
+                            e.target.value as OrderStatus,
+                          )
+                        }
+                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border-none ${statusColors[order.status]}`}
                       >
-                        {order.status}
-                      </span>
+                        <option>New Order</option>
+                        <option>Packed</option>
+                        <option>Shipped</option>
+                        <option>Completed</option>
+                        <option>Refunded</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {order.square_receipt_url ? (
