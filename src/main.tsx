@@ -6,6 +6,7 @@ import WholesalePage from "./WholesalePage.tsx";
 import Login from "./Login.tsx";
 import CreateAccount from "./CreateAccount.tsx";
 import Profile from "./Profile.tsx";
+import Admin from "./Admin.tsx";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -17,6 +18,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/login" element={<Login />} />
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

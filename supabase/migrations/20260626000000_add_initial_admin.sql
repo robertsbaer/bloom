@@ -1,0 +1,1 @@
+INSERT INTO public.admin_users (user_id) VALUES ('bb11a1fd-9391-48d9-8879-8ecd69773529');

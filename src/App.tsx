@@ -271,6 +271,20 @@ export default function App() {
                 >
                   Profile
                 </Link>
+                <Link
+                  to="/admin"
+                  className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#a07840")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "#6b5c45")
+                  }
+                >
+                  Admin
+                </Link>
+
                 <button
                   onClick={() => supabase.auth.signOut()}
                   className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
@@ -440,6 +454,14 @@ export default function App() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Profile
+                </Link>
+                <Link
+                  to="/admin"
+                  className="text-sm uppercase font-sans"
+                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Admin
                 </Link>
                 <button
                   onClick={() => {
