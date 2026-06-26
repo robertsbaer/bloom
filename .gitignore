@@ -22,6 +22,7 @@ dist-ssr
 *.sw?
 .env
 .env.production
+.env.development
 
 # Supabase CLI working files
 supabase/.temp/

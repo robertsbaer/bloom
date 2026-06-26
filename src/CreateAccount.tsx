@@ -96,9 +96,13 @@ export default function CreateAccount() {
           <div>
             <input
               type="email"
+              placeholder="Email"
               value={email}
-              disabled
-              className={`${inputCls} bg-gray-200 cursor-not-allowed`}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isPostPurchase}
+              className={`${inputCls} ${
+                isPostPurchase ? "bg-gray-200 cursor-not-allowed" : ""
+              }`}
               style={inputStyle}
             />
           </div>

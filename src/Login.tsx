@@ -93,6 +93,15 @@ export default function Login() {
             {error}
           </p>
         )}
+        <div
+          className="text-center text-sm font-sans"
+          style={{ color: "#6b5c45" }}
+        >
+          Don't have an account?{" "}
+          <Link to="/create-account" className="underline hover:text-[#a07840]">
+            Sign up
+          </Link>
+        </div>
         <div className="text-center">
           <Link
             to="/"
