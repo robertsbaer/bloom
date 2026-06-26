@@ -9,6 +9,13 @@ import Profile from "./Profile.tsx";
 import Admin from "./Admin.tsx";
 import "./index.css";
 
+// Handle the GitHub Pages 404 redirect
+const redirect = sessionStorage.getItem("redirect");
+if (redirect) {
+  sessionStorage.removeItem("redirect");
+  history.replaceState(null, "", redirect);
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
