@@ -47,6 +47,7 @@ export default function WholesalePage() {
     }
     setError("");
     setSubmitting(true);
+    console.log("Submitting...");
     const { error: dbError } = await supabase
       .from("wholesale_inquiries")
       .insert({
@@ -59,8 +60,10 @@ export default function WholesalePage() {
         items,
         notes: info.notes || null,
       });
+    console.log("Submission response received", { dbError });
     setSubmitting(false);
     if (dbError) {
+      console.error("Supabase error:", dbError);
       setError("Something went wrong. Please try again.");
     } else {
       setSent(true);

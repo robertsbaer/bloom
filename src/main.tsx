@@ -7,6 +7,7 @@ import Login from "./Login.tsx";
 import CreateAccount from "./CreateAccount.tsx";
 import Profile from "./Profile.tsx";
 import Admin from "./Admin.tsx";
+import UpdatePassword from "./UpdatePassword.tsx";
 import "./index.css";
 
 // Handle the GitHub Pages 404 redirect
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

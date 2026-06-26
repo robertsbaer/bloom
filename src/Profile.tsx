@@ -132,6 +132,9 @@ export default function Profile() {
                 setResetStatus({ submitting: true, message: "", error: "" });
                 const { error } = await supabase.auth.resetPasswordForEmail(
                   user.email!,
+                  {
+                    redirectTo: "https://mybloom55.com/update-password",
+                  },
                 );
                 if (error) {
                   setResetStatus({
