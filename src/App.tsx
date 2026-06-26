@@ -211,6 +211,7 @@ export default function App() {
     { label: "Story", href: "#story" },
     { label: "Inside the Formula", href: "#inside-the-formula" },
     { label: "Latest Buzz", href: "#latest-buzz" },
+    { label: "Wholesale", href: "/wholesale" },
   ];
 
   return (
@@ -247,15 +248,6 @@ export default function App() {
                 {label}
               </a>
             ))}
-            <Link
-              to="/wholesale"
-              className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
-              style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#a07840")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#6b5c45")}
-            >
-              Wholesale
-            </Link>
             {user ? (
               <>
                 <Link

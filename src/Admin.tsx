@@ -67,8 +67,12 @@ export default function Admin() {
     checkAdminAndFetchOrders();
   }, [navigate]);
 
-  if (loading || !adminCheckCompleted) {
+  if (loading) {
     return <div>Loading...</div>;
+  }
+
+  if (!adminCheckCompleted) {
+    return <div>Verifying admin status...</div>;
   }
 
   if (!isAdmin) {
