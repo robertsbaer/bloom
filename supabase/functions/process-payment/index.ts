@@ -185,7 +185,8 @@ Deno.serve(async (req) => {
   const { count: paidCount, error: countErr } = await supabase
     .from("orders")
     .select("id", { count: "exact", head: true })
-    .eq("status", "paid")
+    .neq("status", "failed") // any non-failed order counts
+    .neq("status", "pending")
     .ilike("email", normalizedEmail);
 
   if (countErr) {
@@ -333,7 +334,7 @@ Deno.serve(async (req) => {
   await supabase
     .from("orders")
     .update({
-      status: "paid",
+      status: "New Order",
       square_payment_id: payment.id,
       square_order_id: payment.order_id ?? null,
       square_receipt_url: payment.receipt_url ?? null,
@@ -385,7 +386,9 @@ Deno.serve(async (req) => {
       },
     });
   } catch (err) {
-    console.error(`Failed to send email for order ${orderRow.id}: ${err.message}`);
+    console.error(
+      `Failed to send email for order ${orderRow.id}: ${err.message}`,
+    );
   }
 
   return json(
