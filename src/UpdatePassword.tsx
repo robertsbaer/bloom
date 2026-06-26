@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabase";
@@ -14,20 +13,43 @@ export default function UpdatePassword() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Manually handle password recovery from URL hash
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1)); // remove #
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        supabase.auth
+          .setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          .then(({ error }) => {
+            if (error) {
+              console.error("Error setting session:", error);
+              setError("Failed to process password recovery link.");
+            } else {
+              // Session is set, now remove the hash from URL
+              window.history.replaceState(null, "", window.location.pathname);
+            }
+          });
+      }
+    }
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (_event === 'PASSWORD_RECOVERY') {
-        // This event is fired when the user clicks the password recovery link.
-        // The session is now active, and you can prompt the user for a new password.
-      }
     });
 
     // Check for user on initial load
     async function getUser() {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
     }
     getUser();
 
@@ -55,7 +77,9 @@ export default function UpdatePassword() {
     if (updateError) {
       setError(updateError.message);
     } else {
-      setMessage("Password updated successfully! Redirecting to your profile...");
+      setMessage(
+        "Password updated successfully! Redirecting to your profile...",
+      );
       setTimeout(() => navigate("/profile"), 2000);
     }
     setLoading(false);
