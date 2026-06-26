@@ -211,8 +211,9 @@ export default function App() {
     { label: "Story", href: "#story" },
     { label: "Inside the Formula", href: "#inside-the-formula" },
     { label: "Latest Buzz", href: "#latest-buzz" },
-    { label: "Wholesale", href: "/wholesale" },
   ];
+
+  const routerLinks = [{ label: "Wholesale", to: "/wholesale" }];
 
   return (
     <div
@@ -247,6 +248,18 @@ export default function App() {
               >
                 {label}
               </a>
+            ))}
+            {routerLinks.map(({ label, to }) => (
+              <Link
+                key={label}
+                to={to}
+                className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+                style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#a07840")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b5c45")}
+              >
+                {label}
+              </Link>
             ))}
             {user ? (
               <>

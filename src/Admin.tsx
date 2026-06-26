@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 type OrderStatus =
   | "New Order"
@@ -115,88 +115,78 @@ export default function Admin() {
       className="min-h-screen"
       style={{ backgroundColor: "#faf7f2", fontFamily: "'Georgia', serif" }}
     >
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-serif mb-6" style={{ color: "#1e3a20" }}>
-          Admin Panel
-        </h1>
+      {/* Admin Header */}
+      <header
+        className="bg-white shadow-sm"
+        style={{ borderBottom: "1px solid #e8e0d0" }}
+      >
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <h1 className="text-xl font-serif" style={{ color: "#1e3a20" }}>
+            Admin Panel
+          </h1>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/"
+              className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+              style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+            >
+              Back to Home
+            </Link>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+              style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Order ID
+                <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4">
+                    Order
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Date
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-4">
                     Customer
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Email
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Shipping Address
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-4">
                     Total
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-4">
                     Status
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-4">
                     Receipt
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {order.id.slice(0, 8)}
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.id.slice(0, 8)}...
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(order.created_at).toLocaleDateString()}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.ship_name}
+                      </div>
+                      <div className="text-sm text-gray-500">{order.email}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {order.ship_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {order.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {order.ship_address1}, {order.ship_city},{" "}
-                      {order.ship_state} {order.ship_postal_code}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       ${(order.total_cents / 100).toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <select
                         value={order.status}
                         onChange={(e) =>
@@ -205,7 +195,8 @@ export default function Admin() {
                             e.target.value as OrderStatus,
                           )
                         }
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border-none ${statusColors[order.status]}`}
+                        className={`text-xs font-semibold rounded-full border-none p-2 appearance-none ${statusColors[order.status]}`}
+                        style={{ minWidth: "120px" }}
                       >
                         <option>New Order</option>
                         <option>Packed</option>
@@ -214,13 +205,13 @@ export default function Admin() {
                         <option>Refunded</option>
                       </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {order.square_receipt_url ? (
                         <a
                           href={order.square_receipt_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-indigo-600 hover:text-indigo-900 font-sans font-medium"
                         >
                           View Receipt
                         </a>
@@ -234,7 +225,7 @@ export default function Admin() {
             </table>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
