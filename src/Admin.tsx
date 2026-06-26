@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -38,7 +38,22 @@ export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCheckCompleted, setAdminCheckCompleted] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<OrderStatus | "All">("All");
   const navigate = useNavigate();
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesFilter =
+        activeFilter === "All" || order.status === activeFilter;
+      const matchesSearch =
+        searchQuery === "" ||
+        order.ship_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.id.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [orders, searchQuery, activeFilter]);
 
   useEffect(() => {
     const checkAdminAndFetchOrders = async () => {
@@ -137,8 +152,45 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Search and Filter Controls */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row gap-4">
+            <input
+              type="text"
+              placeholder="Search by name, email, or order ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-grow px-4 py-2.5 rounded-xl text-sm font-sans outline-none transition-all bg-white border border-gray-300"
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              {(
+                [
+                  "All",
+                  "New Order",
+                  "Packed",
+                  "Shipped",
+                  "Completed",
+                  "Refunded",
+                ] as const
+              ).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setActiveFilter(status)}
+                  className={`px-4 py-2 rounded-full text-xs font-sans font-semibold transition-all duration-200 ${
+                    activeFilter === status
+                      ? "bg-green-800 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-4">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}

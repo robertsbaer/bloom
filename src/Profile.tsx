@@ -15,11 +15,12 @@ export default function Profile() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (user: User) => {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
-      .select("*, order_items(*)")
+      .select("id, created_at, total_cents, status")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -38,7 +39,7 @@ export default function Profile() {
       } = await supabase.auth.getUser();
       setUser(currentUser);
       if (currentUser) {
-        await fetchOrders();
+        await fetchOrders(currentUser);
       } else {
         setLoading(false);
       }
@@ -50,8 +51,8 @@ export default function Profile() {
       async (event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
-        if (event === "SIGNED_IN") {
-          await fetchOrders();
+        if (event === "SIGNED_IN" && currentUser) {
+          await fetchOrders(currentUser);
         }
         if (event === "SIGNED_OUT") {
           setOrders([]);
@@ -117,6 +118,21 @@ export default function Profile() {
               Welcome, {user.email}
             </p>
           )}
+        </div>
+
+        <div className="mb-10 text-center">
+          <button
+            onClick={async () => {
+              if (user) {
+                await supabase.auth.resetPasswordForEmail(user.email!);
+                alert("A password reset link has been sent to your email.");
+              }
+            }}
+            className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+            style={{ color: "#a07840", letterSpacing: "0.1em" }}
+          >
+            Reset Password
+          </button>
         </div>
 
         <h2
