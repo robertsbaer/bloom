@@ -13,6 +13,7 @@ interface Order {
   id: string;
   created_at: string;
   email: string;
+  phone: string;
   ship_name: string;
   ship_address1: string;
   ship_address2: string | null;
@@ -38,22 +39,6 @@ export default function Admin() {
   const [adminCheckCompleted, setAdminCheckCompleted] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const navigate = useNavigate();
-
-  async function updateOrderStatus(orderId: string, status: OrderStatus) {
-    const { error } = await supabase
-      .from("orders")
-      .update({ status })
-      .eq("id", orderId);
-
-    if (error) {
-      console.error("Error updating order status:", error);
-      return;
-    }
-
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
-    );
-  }
 
   useEffect(() => {
     const checkAdminAndFetchOrders = async () => {
@@ -98,17 +83,25 @@ export default function Admin() {
     checkAdminAndFetchOrders();
   }, [navigate]);
 
-  if (loading) {
-    return <div>Loading...</div>;
+  async function updateOrderStatus(orderId: string, status: OrderStatus) {
+    const { error } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", orderId);
+
+    if (error) {
+      console.error("Error updating order status:", error);
+      return;
+    }
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
+    );
   }
 
-  if (!adminCheckCompleted) {
-    return <div>Verifying admin status...</div>;
-  }
-
-  if (!isAdmin) {
-    return <div>Access Denied</div>;
-  }
+  if (loading) return <div>Loading...</div>;
+  if (!adminCheckCompleted) return <div>Verifying admin status...</div>;
+  if (!isAdmin) return <div>Access Denied</div>;
 
   return (
     <div
@@ -120,7 +113,7 @@ export default function Admin() {
         className="bg-white shadow-sm"
         style={{ borderBottom: "1px solid #e8e0d0" }}
       >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <h1 className="text-xl font-serif" style={{ color: "#1e3a20" }}>
             Admin Panel
           </h1>
@@ -143,89 +136,107 @@ export default function Admin() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <th scope="col" className="px-6 py-4">
-                    Order
-                  </th>
-                  <th scope="col" className="px-6 py-4">
-                    Customer
-                  </th>
-                  <th scope="col" className="px-6 py-4">
-                    Total
-                  </th>
-                  <th scope="col" className="px-6 py-4">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-4">
-                    Receipt
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {order.id.slice(0, 8)}...
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {order.ship_name}
-                      </div>
-                      <div className="text-sm text-gray-500">{order.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${(order.total_cents / 100).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <select
-                        value={order.status}
-                        onChange={(e) =>
-                          updateOrderStatus(
-                            order.id,
-                            e.target.value as OrderStatus,
-                          )
-                        }
-                        className={`text-xs font-semibold rounded-full border-none p-2 appearance-none ${statusColors[order.status]}`}
-                        style={{ minWidth: "120px" }}
-                      >
-                        <option>New Order</option>
-                        <option>Packed</option>
-                        <option>Shipped</option>
-                        <option>Completed</option>
-                        <option>Refunded</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.square_receipt_url ? (
-                        <a
-                          href={order.square_receipt_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-600 hover:text-indigo-900 font-sans font-medium"
-                        >
-                          View Receipt
-                        </a>
-                      ) : (
-                        "N/A"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="space-y-4">
+          {orders.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              updateStatus={updateOrderStatus}
+            />
+          ))}
         </div>
       </main>
+    </div>
+  );
+}
+
+function OrderCard({
+  order,
+  updateStatus,
+}: {
+  order: Order;
+  updateStatus: (id: string, status: OrderStatus) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div
+        className="p-4 sm:p-6 cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 sm:mb-0">
+            <p className="text-sm font-medium text-gray-900">
+              Order #{order.id.slice(0, 8)}...
+            </p>
+            <p className="text-sm text-gray-500">
+              {new Date(order.created_at).toLocaleString()}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <p className="text-sm font-medium text-gray-900">
+              ${(order.total_cents / 100).toFixed(2)}
+            </p>
+            <select
+              value={order.status}
+              onChange={(e) =>
+                updateStatus(order.id, e.target.value as OrderStatus)
+              }
+              onClick={(e) => e.stopPropagation()} // Prevent card from toggling when clicking select
+              className={`text-xs font-semibold rounded-full border-none p-2 appearance-none ${statusColors[order.status]}`}
+              style={{ minWidth: "120px" }}
+            >
+              <option>New Order</option>
+              <option>Packed</option>
+              <option>Shipped</option>
+              <option>Completed</option>
+              <option>Refunded</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      {isOpen && (
+        <div className="border-t border-gray-200 p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-xs uppercase font-sans text-gray-500 mb-2">
+                Customer
+              </h3>
+              <p className="text-sm text-gray-900">{order.ship_name}</p>
+              <p className="text-sm text-gray-600">{order.email}</p>
+              <p className="text-sm text-gray-600">{order.phone}</p>
+            </div>
+            <div>
+              <h3 className="text-xs uppercase font-sans text-gray-500 mb-2">
+                Shipping Address
+              </h3>
+              <p className="text-sm text-gray-900">{order.ship_address1}</p>
+              {order.ship_address2 && (
+                <p className="text-sm text-gray-900">{order.ship_address2}</p>
+              )}
+              <p className="text-sm text-gray-900">
+                {order.ship_city}, {order.ship_state} {order.ship_postal_code}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4">
+            {order.square_receipt_url ? (
+              <a
+                href={order.square_receipt_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-indigo-600 hover:text-indigo-900 font-sans font-medium"
+              >
+                View Square Receipt
+              </a>
+            ) : (
+              <p className="text-sm text-gray-500">No receipt available.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
