@@ -42,9 +42,12 @@ export default function Admin() {
 
       if (adminError || !admin) {
         setIsAdmin(false);
-      } else {
-        setIsAdmin(true);
+        setAdminCheckCompleted(true);
+        setLoading(false);
+        return;
       }
+
+      setIsAdmin(true);
       setAdminCheckCompleted(true);
 
       const { data: orders, error: ordersError } = await supabase
