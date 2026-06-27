@@ -8,44 +8,19 @@ export default function UpdatePassword() {
   const [user, setUser] = useState<User | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const initializeSession = async () => {
-      const hash = window.location.hash;
-      if (hash.includes("type=recovery")) {
-        const params = new URLSearchParams(hash.substring(1));
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
-
-        if (accessToken && refreshToken) {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (sessionError) {
-            console.error("Error setting session:", sessionError);
-            setError("Failed to process password recovery link.");
-            setLoading(false);
-            return;
-          }
-          window.history.replaceState(null, "", window.location.pathname);
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        if (!session) {
+          setError("You must be logged in to update your password.");
         }
-      }
-
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
-      setLoading(false);
-    };
-
-    initializeSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+      },
+    );
 
     return () => {
       authListener.subscription.unsubscribe();

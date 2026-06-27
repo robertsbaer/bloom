@@ -92,21 +92,17 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (event === "PASSWORD_RECOVERY") {
+        navigate("/update-password");
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
-
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      navigate("/update-password");
-    }
-  }, [navigate]);
 
   // Email popup
   const [popupOpen, setPopupOpen] = useState(false);
