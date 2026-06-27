@@ -18,7 +18,7 @@ serve(async (req) => {
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({
     type: "recovery",
     email: email,
-    redirectTo: `${Deno.env.get("SITE_URL")}/update-password`,
+    redirectTo: "https://mybloom55.com/update-password",
   });
 
   if (error) {
