@@ -1,31 +1,44 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabase";
-import { User } from "@supabase/supabase-js";
 
 export default function UpdatePassword() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [canUpdate, setCanUpdate] = useState(false);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+    // This listener fires when the user lands on the page from the magic link
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "PASSWORD_RECOVERY") {
+          if (session) {
+            setCanUpdate(true);
+          }
+        } else if (event === "SIGNED_IN") {
+          // If the user is already signed in and lands here, redirect them.
+          navigate("/profile");
+        }
+      },
+    );
+
+    // Check if there is already a recovery session on page load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
         setError(
           "Invalid or expired password recovery link. Please try again.",
         );
       }
-      setLoading(false);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-    checkUser();
-  }, []);
+  }, [navigate]);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,13 +111,13 @@ export default function UpdatePassword() {
           <div>
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-full text-sm font-sans transition-all duration-200"
+              disabled={!canUpdate || loading}
+              className="w-full py-3.5 rounded-full text-sm font-sans transition-all duration-200 disabled:opacity-50"
               style={{
                 backgroundColor: loading ? "#a3a89c" : "#1e3a20",
                 color: "#fff",
                 letterSpacing: "0.08em",
-                cursor: loading ? "not-allowed" : "pointer",
+                cursor: !canUpdate || loading ? "not-allowed" : "pointer",
               }}
             >
               {loading ? "Updating..." : "Update Password"}
