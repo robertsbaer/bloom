@@ -75,6 +75,7 @@ const CATALOG: Record<number, Record<string, number>> = {
   6: { "1 fl oz Airless Pump": 2500 }, // Midnight Bloom Serum
   7: { "1 fl oz Airless Pump": 2000 }, // Radiance Facial Moisturizer
   8: { "1 fl oz Airless Pump": 2000 }, // Radiance Lite Facial Moisturizer
+  8: { "1 fl oz Airless Pump": 2000 }, // Radiance Lite Facial Moisturizer
 };
 
 const PRODUCT_NAMES: Record<number, string> = {
@@ -86,6 +87,7 @@ const PRODUCT_NAMES: Record<number, string> = {
   5: "Bloom 5.5 Desert Veil Lip Balm",
   6: "Bloom 5.5 Midnight Bloom Serum",
   7: "Bloom 5.5 Radiance Facial Moisturizer",
+  8: "Bloom 5.5 Radiance Lite Facial Moisturizer",
   8: "Bloom 5.5 Radiance Lite Facial Moisturizer",
 };
 
@@ -225,7 +227,7 @@ Deno.serve(async (req) => {
       total_cents: totalCents,
       is_first_purchase: isFirstPurchase,
       discount_code: isFirstPurchase ? "FIRST10" : null,
-      status: "pending",
+      status: "Pending",
     })
     .select()
     .single();
@@ -248,7 +250,7 @@ Deno.serve(async (req) => {
   if (itemsErr) {
     await supabase
       .from("orders")
-      .update({ status: "failed", failure_reason: itemsErr.message })
+      .update({ status: "Failed", failure_reason: itemsErr.message })
       .eq("id", orderRow.id);
     return json(
       { error: "Could not save line items", detail: itemsErr.message },
@@ -271,10 +273,40 @@ Deno.serve(async (req) => {
   if (!squareToken || !squareLocation) {
     await supabase
       .from("orders")
-      .update({ status: "failed", failure_reason: "Missing Square config" })
+      .update({ status: "Failed", failure_reason: "Missing Square config" })
       .eq("id", orderRow.id);
     return json({ error: "Server not configured for payments" }, 500, origin);
   }
+
+  const paymentPayload = {
+    source_id: sourceId,
+    idempotency_key: idempotencyKey,
+    amount_money: { amount: totalCents, currency: "USD" },
+    location_id: squareLocation,
+    buyer_email_address: normalizedEmail,
+    shipping_address: {
+      first_name: shipping.name.split(" ")[0],
+      last_name: shipping.name.split(" ").slice(1).join(" ") || shipping.name,
+      address_line_1: shipping.address1,
+      address_line_2: shipping.address2 ?? "",
+      locality: shipping.city,
+      administrative_district_level_1: shipping.state,
+      postal_code: shipping.postalCode,
+      country: shipping.country ?? "US",
+    },
+    billing_address: {
+      first_name: billing.name.split(" ")[0],
+      last_name: billing.name.split(" ").slice(1).join(" ") || billing.name,
+      address_line_1: billing.address1,
+      address_line_2: billing.address2 ?? "",
+      locality: billing.city,
+      administrative_district_level_1: billing.state,
+      postal_code: billing.postalCode,
+      country: billing.country ?? "US",
+    },
+    reference_id: orderRow.id,
+    note: `Bloom 5.5 order ${orderRow.id.slice(0, 8)}`,
+  };
 
   const squareResponse = await fetch(`${squareBase}/v2/payments`, {
     method: "POST",
@@ -283,35 +315,7 @@ Deno.serve(async (req) => {
       Authorization: `Bearer ${squareToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      source_id: sourceId,
-      idempotency_key: idempotencyKey,
-      amount_money: { amount: totalCents, currency: "USD" },
-      location_id: squareLocation,
-      buyer_email_address: normalizedEmail,
-      shipping_address: {
-        first_name: shipping.name.split(" ")[0],
-        last_name: shipping.name.split(" ").slice(1).join(" ") || shipping.name,
-        address_line_1: shipping.address1,
-        address_line_2: shipping.address2 ?? "",
-        locality: shipping.city,
-        administrative_district_level_1: shipping.state,
-        postal_code: shipping.postalCode,
-        country: shipping.country ?? "US",
-      },
-      billing_address: {
-        first_name: billing.name.split(" ")[0],
-        last_name: billing.name.split(" ").slice(1).join(" ") || billing.name,
-        address_line_1: billing.address1,
-        address_line_2: billing.address2 ?? "",
-        locality: billing.city,
-        administrative_district_level_1: billing.state,
-        postal_code: billing.postalCode,
-        country: billing.country ?? "US",
-      },
-      reference_id: orderRow.id,
-      note: `Bloom 5.5 order ${orderRow.id.slice(0, 8)}`,
-    }),
+    body: JSON.stringify(paymentPayload),
   });
 
   const squareData = await squareResponse.json();
@@ -323,7 +327,7 @@ Deno.serve(async (req) => {
       "Payment declined";
     await supabase
       .from("orders")
-      .update({ status: "failed", failure_reason: reason })
+      .update({ status: "Failed", failure_reason: reason })
       .eq("id", orderRow.id);
     return json({ error: reason, errors: squareData?.errors }, 402, origin);
   }
