@@ -67,6 +67,7 @@ export default function App() {
     message: "",
   });
   const [contactSent, setContactSent] = useState(false);
+  const [contactSubmitting, setContactSubmitting] = useState(false);
 
   // Report a problem modal
   const [reportOpen, setReportOpen] = useState(false);
@@ -174,15 +175,32 @@ export default function App() {
     setCartItems((prev) => prev.filter((i) => i.id !== id));
   }
 
+  async function submitContact(e: React.FormEvent) {
+    e.preventDefault();
+    setContactSubmitting(true);
+    const emailPayload = {
+      type: "contact",
+      name: contactForm.name,
+      email: contactForm.email,
+      reason: contactForm.reason,
+      message: contactForm.message,
+    };
+    await supabase.functions.invoke("send-smtp-email", { body: emailPayload });
+    setContactSubmitting(false);
+    setContactSent(true);
+  }
+
   async function submitReport(e: React.FormEvent) {
     e.preventDefault();
     setReportSubmitting(true);
-    await supabase.from("product_reports").insert({
-      product_name: reportForm.productName,
-      issue_description: reportForm.issueDescription,
-      contact_info: reportForm.contactInfo || null,
-      other: reportForm.other || null,
-    });
+    const emailPayload = {
+      type: "report",
+      productName: reportForm.productName,
+      issueDescription: reportForm.issueDescription,
+      contactInfo: reportForm.contactInfo,
+      other: reportForm.other,
+    };
+    await supabase.functions.invoke("send-smtp-email", { body: emailPayload });
     setReportSubmitting(false);
     setReportSent(true);
   }
@@ -1818,20 +1836,7 @@ export default function App() {
                     <h3 className="text-2xl mb-5" style={{ color: "#1e2d1f" }}>
                       Contact Us
                     </h3>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const subject = encodeURIComponent(
-                          `[Bloom 5.5] ${contactForm.reason} — ${contactForm.name}`,
-                        );
-                        const body = encodeURIComponent(
-                          `Name: ${contactForm.name}\nEmail: ${contactForm.email}\nReason: ${contactForm.reason}\n\n${contactForm.message}`,
-                        );
-                        window.location.href = `mailto:admin@mybloom55.com?subject=${subject}&body=${body}`;
-                        setContactSent(true);
-                      }}
-                      className="space-y-4"
-                    >
+                    <form onSubmit={submitContact} className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         {[
                           {

@@ -127,7 +127,59 @@ Deno.serve(async (req) => {
       );
     }
   }
-  // Case 3: Newsletter signup email
+  // Case 3: Contact form submission
+  else if (body.type === "contact") {
+    const { name, email, reason, message } = body;
+    if (!name || !email || !reason || !message) {
+      return json(
+        { error: "Missing required fields for contact form email" },
+        400,
+        origin,
+      );
+    }
+    try {
+      await client.send({
+        from: Deno.env.get("SMTP_FROM")!,
+        to: "admin@mybloom55.com",
+        subject: `New contact form submission: ${reason}`,
+        content: `Name: ${name}\nEmail: ${email}\nReason: ${reason}\n\n${message}`,
+      });
+    } catch (err) {
+      return json(
+        { error: "Failed to send contact form email", detail: err.message },
+        500,
+        origin,
+      );
+    }
+  }
+  // Case 4: Report a problem submission
+  else if (body.type === "report") {
+    const { productName, issueDescription, contactInfo, other } = body;
+    if (!productName || !issueDescription) {
+      return json(
+        {
+          error: "Missing required fields for report a problem email",
+        },
+        400,
+        origin,
+      );
+    }
+    try {
+      await client.send({
+        from: Deno.env.get("SMTP_FROM")!,
+        to: "admin@mybloom55.com",
+        subject: `New problem report: ${productName}`,
+        content: `Product Name: ${productName}\nIssue: ${issueDescription}\nContact: ${contactInfo}\nOther: ${other}`,
+      });
+    } catch (err) {
+      return json(
+        { error: "Failed to send report email", detail: err.message },
+        500,
+        origin,
+      );
+    }
+  }
+  // Case 5: Newsletter signup email
   else if (body.email) {
     const { email } = body;
     try {
