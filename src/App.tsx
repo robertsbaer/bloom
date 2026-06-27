@@ -101,6 +101,13 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery")) {
+      navigate("/update-password");
+    }
+  }, [navigate]);
+
   // Email popup
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupEmail, setPopupEmail] = useState("");
