@@ -30,7 +30,12 @@ export default function Login() {
     if (signInError) {
       setError(signInError.message);
     } else {
-      navigate("/profile");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email === "admin@mybloom55.com") {
+        navigate("/");
+      } else {
+        navigate("/profile");
+      }
     }
     setLoading(false);
   };
