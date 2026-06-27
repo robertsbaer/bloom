@@ -8,23 +8,23 @@ export default function UpdatePassword() {
   const [user, setUser] = useState<User | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        if (!session) {
-          setError("You must be logged in to update your password.");
-        }
-      },
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
+    const checkUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError(
+          "Invalid or expired password recovery link. Please try again.",
+        );
+      }
+      setLoading(false);
     };
+    checkUser();
   }, []);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
