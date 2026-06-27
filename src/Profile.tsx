@@ -129,7 +129,7 @@ export default function Profile() {
 
         {loading ? (
           <p className="text-center font-sans" style={{ color: "#6b5c45" }}>
-            Loading orders...
+            Loading orders....
           </p>
         ) : orders.length > 0 ? (
           <div className="overflow-x-auto">
