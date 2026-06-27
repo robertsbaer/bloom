@@ -78,129 +78,139 @@ Deno.serve(async (req) => {
         origin,
       );
     }
-  }
-  // Case 2: Wholesale inquiry
-  else if (body.businessName) {
-    const {
-      to,
-      businessName,
-      contactName,
-      email,
-      phone,
-      businessType,
-      state,
-      notes,
-      items,
-    } = body;
-    if (!to || !businessName || !contactName || !email) {
-      return json(
-        { error: "Missing required fields for wholesale email" },
-        400,
-        origin,
-      );
-    }
-    try {
-      // Send email to admin
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
-        to: "orders@mybloom55.com",
-        subject: `New wholesale inquiry from ${businessName}`,
-        content: template.wholesaleInquiryAdminText({ ...body, to: undefined }),
-        html: template.wholesaleInquiryAdminHtml({ ...body, to: undefined }),
-      });
+  } else {
+    switch (body.type) {
+      case "wholesale": {
+        const {
+          to,
+          businessName,
+          contactName,
+          email,
+          phone,
+          businessType,
+          state,
+          notes,
+          items,
+        } = body;
+        if (!to || !businessName || !contactName || !email) {
+          return json(
+            { error: "Missing required fields for wholesale email" },
+            400,
+            origin,
+          );
+        }
+        try {
+          // Send email to admin
+          await client.send({
+            from: Deno.env.get("SMTP_FROM")!,
+            to: "orders@mybloom55.com",
+            subject: `New wholesale inquiry from ${businessName}`,
+            content: template.wholesaleInquiryAdminText({
+              ...body,
+              to: undefined,
+            }),
+            html: template.wholesaleInquiryAdminHtml({
+              ...body,
+              to: undefined,
+            }),
+          });
 
-      // Send confirmation email to user
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
-        to: email,
-        subject: "Your Bloom 5.5 wholesale inquiry has been received",
-        content: template.wholesaleInquiryConfirmationText({
-          name: contactName,
-        }),
-        html: template.wholesaleInquiryConfirmationHtml({ name: contactName }),
-      });
-    } catch (err) {
-      return json(
-        { error: "Failed to send wholesale email", detail: err.message },
-        500,
-        origin,
-      );
+          // Send confirmation email to user
+          await client.send({
+            from: Deno.env.get("SMTP_FROM")!,
+            to: email,
+            subject: "Your Bloom 5.5 wholesale inquiry has been received",
+            content: template.wholesaleInquiryConfirmationText({
+              name: contactName,
+            }),
+            html: template.wholesaleInquiryConfirmationHtml({
+              name: contactName,
+            }),
+          });
+        } catch (err) {
+          return json(
+            { error: "Failed to send wholesale email", detail: err.message },
+            500,
+            origin,
+          );
+        }
+        break;
+      }
+      case "contact": {
+        const { name, email, reason, message } = body;
+        if (!name || !email || !reason || !message) {
+          return json(
+            { error: "Missing required fields for contact form email" },
+            400,
+            origin,
+          );
+        }
+        try {
+          await client.send({
+            from: Deno.env.get("SMTP_FROM")!,
+            to: "admin@mybloom55.com",
+            subject: `New contact form submission: ${reason}`,
+            content: `Name: ${name}\nEmail: ${email}\nReason: ${reason}\n\n${message}`,
+          });
+        } catch (err) {
+          return json(
+            { error: "Failed to send contact form email", detail: err.message },
+            500,
+            origin,
+          );
+        }
+        break;
+      }
+      case "report": {
+        const { productName, issueDescription, contactInfo, other } = body;
+        if (!productName || !issueDescription) {
+          return json(
+            {
+              error: "Missing required fields for report a problem email",
+            },
+            400,
+            origin,
+          );
+        }
+        try {
+          await client.send({
+            from: Deno.env.get("SMTP_FROM")!,
+            to: "admin@mybloom55.com",
+            subject: `New problem report: ${productName}`,
+            content: `Product Name: ${productName}\nIssue: ${issueDescription}\nContact: ${contactInfo}\nOther: ${other}`,
+          });
+        } catch (err) {
+          return json(
+            { error: "Failed to send report email", detail: err.message },
+            500,
+            origin,
+          );
+        }
+        break;
+      }
+      case "newsletter": {
+        const { email } = body;
+        try {
+          await client.send({
+            from: Deno.env.get("SMTP_FROM")!,
+            to: email,
+            subject: "Welcome to Bloom 5.5! Here’s your 10% off code",
+            content: template.newsletterText(),
+            html: template.newsletterHtml(),
+          });
+        } catch (err) {
+          return json(
+            { error: "Failed to send newsletter email", detail: err.message },
+            500,
+            origin,
+          );
+        }
+        break;
+      }
+      default: {
+        return json({ error: "Invalid request body" }, 400, origin);
+      }
     }
-  }
-  // Case 3: Contact form submission
-  else if (body.type === "contact") {
-    const { name, email, reason, message } = body;
-    if (!name || !email || !reason || !message) {
-      return json(
-        { error: "Missing required fields for contact form email" },
-        400,
-        origin,
-      );
-    }
-    try {
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
-        to: "admin@mybloom55.com",
-        subject: `New contact form submission: ${reason}`,
-        content: `Name: ${name}\nEmail: ${email}\nReason: ${reason}\n\n${message}`,
-      });
-    } catch (err) {
-      return json(
-        { error: "Failed to send contact form email", detail: err.message },
-        500,
-        origin,
-      );
-    }
-  }
-  // Case 4: Report a problem submission
-  else if (body.type === "report") {
-    const { productName, issueDescription, contactInfo, other } = body;
-    if (!productName || !issueDescription) {
-      return json(
-        {
-          error: "Missing required fields for report a problem email",
-        },
-        400,
-        origin,
-      );
-    }
-    try {
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
-        to: "admin@mybloom55.com",
-        subject: `New problem report: ${productName}`,
-        content: `Product Name: ${productName}\nIssue: ${issueDescription}\nContact: ${contactInfo}\nOther: ${other}`,
-      });
-    } catch (err) {
-      return json(
-        { error: "Failed to send report email", detail: err.message },
-        500,
-        origin,
-      );
-    }
-  }
-  // Case 5: Newsletter signup email
-  else if (body.email) {
-    const { email } = body;
-    try {
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
-        to: email,
-        subject: "Welcome to Bloom 5.5! Here’s your 10% off code",
-        content: template.newsletterText(),
-        html: template.newsletterHtml(),
-      });
-    } catch (err) {
-      return json(
-        { error: "Failed to send newsletter email", detail: err.message },
-        500,
-        origin,
-      );
-    }
-  }
-  // Default case: invalid request body
-  else {
-    return json({ error: "Invalid request body" }, 400, origin);
   }
 
   await client.close();

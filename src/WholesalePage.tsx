@@ -51,6 +51,7 @@ export default function WholesalePage() {
 
     try {
       const emailPayload = {
+        type: "wholesale",
         to: info.email,
         businessName: info.businessName,
         contactName: info.contactName,

@@ -212,7 +212,7 @@ export default function App() {
       .from("email_signups")
       .insert({ email: popupEmail, source: "popup_10off" });
     await supabase.functions.invoke("send-smtp-email", {
-      body: { email: popupEmail },
+      body: { type: "newsletter", email: popupEmail },
     });
     setPopupSubmitting(false);
     setPopupSent(true);
