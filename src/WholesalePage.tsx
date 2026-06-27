@@ -48,28 +48,10 @@ export default function WholesalePage() {
     setError("");
     setSubmitting(true);
     console.log("Submitting...");
-    const { error: dbError } = await supabase
-      .from("wholesale_inquiries")
-      .insert({
-        business_name: info.businessName,
-        contact_name: info.contactName,
-        email: info.email,
-        phone: info.phone || null,
-        business_type: info.businessType || null,
-        state: info.state || null,
-        items,
-        notes: info.notes || null,
-      });
-    console.log("Submission response received", { dbError });
-    setSubmitting(false);
-    if (dbError) {
-      console.error("Supabase error:", dbError);
-      setError("Something went wrong. Please try again.");
-    } else {
-      setSent(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      // Also invoke email sending function
+
+    try {
       const emailPayload = {
+        to: info.email,
         businessName: info.businessName,
         contactName: info.contactName,
         email: info.email,
@@ -86,7 +68,25 @@ export default function WholesalePage() {
           )
           .join(""),
       };
-      supabase.functions.invoke("send-smtp-email", { body: emailPayload });
+
+      const { error: emailError } = await supabase.functions.invoke(
+        "send-smtp-email",
+        { body: emailPayload },
+      );
+
+      console.log("Submission response received", { emailError });
+
+      if (emailError) {
+        throw emailError;
+      }
+
+      setSent(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      console.error("Submission error:", error);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
 

@@ -51,14 +51,24 @@ Deno.serve(async (req) => {
   if (body.orderId) {
     const { to, name, orderId, total, items, shippingAddress } = body;
     if (!to || !name || !orderId || !total || !items || !shippingAddress) {
-      return json({ error: "Missing required fields for order email" }, 400, origin);
+      return json(
+        { error: "Missing required fields for order email" },
+        400,
+        origin,
+      );
     }
     try {
       await client.send({
         from: Deno.env.get("SMTP_FROM")!,
         to,
         subject: `Your Bloom 5.5 order #${orderId.slice(0, 8)} is confirmed`,
-        content: template.text({ orderId, name, total, items, shippingAddress }),
+        content: template.text({
+          orderId,
+          name,
+          total,
+          items,
+          shippingAddress,
+        }),
         html: template.html({ orderId, name, total, items, shippingAddress }),
       });
     } catch (err) {
@@ -68,7 +78,7 @@ Deno.serve(async (req) => {
         origin,
       );
     }
-  } 
+  }
   // Case 2: Wholesale inquiry
   else if (body.businessName) {
     const {
@@ -104,7 +114,9 @@ Deno.serve(async (req) => {
         from: Deno.env.get("SMTP_FROM")!,
         to: email,
         subject: "Your Bloom 5.5 wholesale inquiry has been received",
-        content: template.wholesaleInquiryConfirmationText({ name: contactName }),
+        content: template.wholesaleInquiryConfirmationText({
+          name: contactName,
+        }),
         html: template.wholesaleInquiryConfirmationHtml({ name: contactName }),
       });
     } catch (err) {
