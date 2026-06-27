@@ -69,7 +69,53 @@ Deno.serve(async (req) => {
       );
     }
   } 
-  // Case 2: Newsletter signup email
+  // Case 2: Wholesale inquiry
+  else if (body.businessName) {
+    const {
+      to,
+      businessName,
+      contactName,
+      email,
+      phone,
+      businessType,
+      state,
+      notes,
+      items,
+    } = body;
+    if (!to || !businessName || !contactName || !email) {
+      return json(
+        { error: "Missing required fields for wholesale email" },
+        400,
+        origin,
+      );
+    }
+    try {
+      // Send email to admin
+      await client.send({
+        from: Deno.env.get("SMTP_FROM")!,
+        to: "orders@mybloom55.com",
+        subject: `New wholesale inquiry from ${businessName}`,
+        content: template.wholesaleInquiryAdminText({ ...body, to: undefined }),
+        html: template.wholesaleInquiryAdminHtml({ ...body, to: undefined }),
+      });
+
+      // Send confirmation email to user
+      await client.send({
+        from: Deno.env.get("SMTP_FROM")!,
+        to: email,
+        subject: "Your Bloom 5.5 wholesale inquiry has been received",
+        content: template.wholesaleInquiryConfirmationText({ name: contactName }),
+        html: template.wholesaleInquiryConfirmationHtml({ name: contactName }),
+      });
+    } catch (err) {
+      return json(
+        { error: "Failed to send wholesale email", detail: err.message },
+        500,
+        origin,
+      );
+    }
+  }
+  // Case 3: Newsletter signup email
   else if (body.email) {
     const { email } = body;
     try {
