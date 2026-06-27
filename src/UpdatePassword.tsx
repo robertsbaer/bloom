@@ -12,28 +12,28 @@ export default function UpdatePassword() {
   const [canUpdate, setCanUpdate] = useState(false);
 
   useEffect(() => {
-    // This listener fires when the user lands on the page from the magic link
+    // If a normal user lands on this page, redirect them.
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        navigate("/profile");
+      }
+    });
+
+    // This listener fires when the user lands on the page from the magic link.
+    // It establishes the recovery session.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === "PASSWORD_RECOVERY") {
           if (session) {
             setCanUpdate(true);
+          } else {
+            setError(
+              "Invalid or expired password recovery link. Please try again.",
+            );
           }
-        } else if (event === "SIGNED_IN") {
-          // If the user is already signed in and lands here, redirect them.
-          navigate("/profile");
         }
       },
     );
-
-    // Check if there is already a recovery session on page load
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        setError(
-          "Invalid or expired password recovery link. Please try again.",
-        );
-      }
-    });
 
     return () => {
       authListener.subscription.unsubscribe();
