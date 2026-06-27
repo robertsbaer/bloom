@@ -102,6 +102,15 @@ export default function App() {
     };
   }, []);
 
+  // Handle SPA redirect from 404.html
+  useEffect(() => {
+    const redirect = sessionStorage.getItem("redirect");
+    if (redirect) {
+      sessionStorage.removeItem("redirect");
+      navigate(redirect);
+    }
+  }, [navigate]);
+
   // Email popup
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupEmail, setPopupEmail] = useState("");
