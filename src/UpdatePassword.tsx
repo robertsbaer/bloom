@@ -58,10 +58,6 @@ export default function UpdatePassword() {
       setError("Passwords do not match");
       return;
     }
-    if (!user) {
-      setError("You must be logged in to update your password.");
-      return;
-    }
     setLoading(true);
     setMessage("");
     setError("");
