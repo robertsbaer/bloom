@@ -68,12 +68,31 @@ export default function WholesalePage() {
     } else {
       setSent(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
+      // Also invoke email sending function
+      const emailPayload = {
+        businessName: info.businessName,
+        contactName: info.contactName,
+        email: info.email,
+        phone: info.phone,
+        businessType: info.businessType,
+        state: info.state,
+        notes: info.notes,
+        items: items
+          .map(
+            (i) =>
+              `<li>${i!.quantity}x ${i!.name} (${i!.size}) - ${i!.price.toFixed(
+                2,
+              )} retail</li>`,
+          )
+          .join(""),
+      };
+      supabase.functions.invoke("send-smtp-email", { body: emailPayload });
     }
   }
 
   const inputStyle = {
-    backgroundColor: "#f5f0e8",
-    border: "1.5px solid #e0d8cc",
+    backgroundColor: "#fff",
+    border: "1px solid #e0d8cc",
     color: "#1e2d1f",
   };
 
