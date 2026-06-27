@@ -8,53 +8,47 @@ export default function UpdatePassword() {
   const [user, setUser] = useState<User | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Manually handle password recovery from URL hash
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1)); // remove #
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
+    const initializeSession = async () => {
+      const hash = window.location.hash;
+      if (hash.includes("type=recovery")) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
 
-      if (accessToken && refreshToken) {
-        supabase.auth
-          .setSession({
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
-          })
-          .then(({ error }) => {
-            if (error) {
-              console.error("Error setting session:", error);
-              setError("Failed to process password recovery link.");
-            } else {
-              // Session is set, now remove the hash from URL
-              window.history.replaceState(null, "", window.location.pathname);
-            }
           });
-      }
-    }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (sessionError) {
+            console.error("Error setting session:", sessionError);
+            setError("Failed to process password recovery link.");
+            setLoading(false);
+            return;
+          }
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+      }
+
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser);
+      setLoading(false);
+    };
+
+    initializeSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
-    // Check for user on initial load
-    async function getUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-    }
-    getUser();
-
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
