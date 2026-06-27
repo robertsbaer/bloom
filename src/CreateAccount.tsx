@@ -54,6 +54,16 @@ export default function CreateAccount() {
       setError(signUpError.message);
     } else if (data.user) {
       setMessage("Account created successfully! Linking order...");
+
+      // Send welcome email
+      await supabase.functions.invoke("send-smtp-email", {
+        body: {
+          type: "new-account",
+          email: data.user.email,
+          name: data.user.email, // Using email as name
+        },
+      });
+
       const orderId = sessionStorage.getItem("pendingOrderId");
       if (orderId) {
         // Link the order to the new user

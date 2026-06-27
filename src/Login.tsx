@@ -16,6 +16,31 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      setError("Please enter your email address to reset your password.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const { error } = await supabase.functions.invoke(
+      "request-password-reset",
+      {
+        body: { email },
+      },
+    );
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage("Password reset link sent! Please check your email.");
+    }
+    setLoading(false);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +55,9 @@ export default function Login() {
     if (signInError) {
       setError(signInError.message);
     } else {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user?.email === "admin@mybloom55.com") {
         navigate("/");
       } else {
@@ -98,14 +125,28 @@ export default function Login() {
             {error}
           </p>
         )}
+        {message && (
+          <p
+            className="text-sm text-center font-sans"
+            style={{ color: "#1e3a20" }}
+          >
+            {message}
+          </p>
+        )}
         <div
-          className="text-center text-sm font-sans"
+          className="text-center text-sm font-sans flex justify-between"
           style={{ color: "#6b5c45" }}
         >
-          Don't have an account?{" "}
           <Link to="/create-account" className="underline hover:text-[#a07840]">
             Sign up
           </Link>
+
+          <button
+            onClick={handlePasswordReset}
+            className="underline hover:text-[#a07840]"
+          >
+            Forgot Password?
+          </button>
         </div>
         <div className="text-center">
           <Link

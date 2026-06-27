@@ -1,15 +1,13 @@
 // @ts-nocheck — This file runs on Deno (Supabase Edge Runtime).
 // Deno provides its own types at runtime; the editor's TS server uses Node typings.
-// Send an email via SMTP. Required secrets:
-//   SMTP_HOST
-//   SMTP_PORT
-//   SMTP_USER
-//   SMTP_PASS
-//   SMTP_FROM
+// Send an email via Resend. Required secrets:
+//   RESEND_API_KEY
 
-import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
+import { Resend } from "https://esm.sh/resend@3.2.0";
 import { corsHeaders } from "./cors.ts";
 import * as template from "./template.ts";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), {
@@ -40,19 +38,9 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON" }, 400, origin);
   }
 
-  const client = new SMTPClient({
-    connection: {
-      hostname: Deno.env.get("SMTP_HOST")!,
-      port: parseInt(Deno.env.get("SMTP_PORT")!, 10),
-      tls: true,
-      auth: {
-        username: Deno.env.get("SMTP_USER")!,
-        password: Deno.env.get("SMTP_PASS")!,
-      },
-    },
-  });
-
   console.log(`Processing request type: ${body.type || "order"}`);
+
+  const from = "admin@mybloom55.com";
 
   // Case 1: Order confirmation email
   if (body.orderId) {
@@ -65,20 +53,14 @@ Deno.serve(async (req) => {
       );
     }
     try {
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
+      await resend.emails.send({
+        from,
         to,
         subject: `Your Bloom 5.5 order #${orderId.slice(0, 8)} is confirmed`,
-        content: template.text({
-          orderId,
-          name,
-          total,
-          items,
-          shippingAddress,
-        }),
         html: template.html({ orderId, name, total, items, shippingAddress }),
       });
     } catch (err) {
+      console.error("Resend error:", err);
       return json(
         { error: "Failed to send order email", detail: err.message },
         500,
@@ -108,25 +90,22 @@ Deno.serve(async (req) => {
     }
     try {
       // Send email to admin
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
+      await resend.emails.send({
+        from,
         to: "orders@mybloom55.com",
         subject: `New wholesale inquiry from ${businessName}`,
-        content: template.wholesaleInquiryAdminText({ ...body, to: undefined }),
         html: template.wholesaleInquiryAdminHtml({ ...body, to: undefined }),
       });
 
       // Send confirmation email to user
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
+      await resend.emails.send({
+        from,
         to: email,
         subject: "Your Bloom 5.5 wholesale inquiry has been received",
-        content: template.wholesaleInquiryConfirmationText({
-          name: contactName,
-        }),
         html: template.wholesaleInquiryConfirmationHtml({ name: contactName }),
       });
     } catch (err) {
+      console.error("Resend error:", err);
       return json(
         { error: "Failed to send wholesale email", detail: err.message },
         500,
@@ -135,19 +114,71 @@ Deno.serve(async (req) => {
     }
   }
   // Case 3: Newsletter signup email
-  else if (body.email) {
+  else if (body.type === "newsletter") {
     const { email } = body;
     try {
-      await client.send({
-        from: Deno.env.get("SMTP_FROM")!,
+      await resend.emails.send({
+        from,
         to: email,
         subject: "Welcome to Bloom 5.5! Here’s your 10% off code",
-        content: template.newsletterText(),
         html: template.newsletterHtml(),
       });
     } catch (err) {
+      console.error("Resend error:", err);
       return json(
         { error: "Failed to send newsletter email", detail: err.message },
+        500,
+        origin,
+      );
+    }
+  }
+  // Case 4: New Account email
+  else if (body.type === "new-account") {
+    const { email, name } = body;
+    if (!email || !name) {
+      return json(
+        { error: "Missing required fields for new account email" },
+        400,
+        origin,
+      );
+    }
+    try {
+      await resend.emails.send({
+        from,
+        to: email,
+        subject: "Welcome to Bloom 5.5!",
+        html: template.newAccountHtml({ name }),
+      });
+    } catch (err) {
+      console.error("Resend error:", err);
+      return json(
+        { error: "Failed to send new account email", detail: err.message },
+        500,
+        origin,
+      );
+    }
+  }
+  // Case 5: Password Reset email
+  else if (body.type === "password-reset") {
+    const { email, name, link } = body;
+    if (!email || !name || !link) {
+      return json(
+        { error: "Missing required fields for password reset email" },
+        400,
+        origin,
+      );
+    }
+    try {
+      await resend.emails.send({
+        from,
+        to: email,
+        subject: "Reset your Bloom 5.5 Password",
+        html: template.passwordResetHtml({ name, link }),
+      });
+    } catch (err) {
+      console.error("Resend error:", err);
+      return json(
+        { error: "Failed to send password reset email", detail: err.message },
         500,
         origin,
       );
@@ -158,6 +189,5 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid request body" }, 400, origin);
   }
 
-  await client.close();
   return json({ ok: true }, 200, origin);
 });
