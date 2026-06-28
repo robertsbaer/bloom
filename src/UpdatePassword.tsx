@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabase";
+import { Session } from "@supabase/supabase-js";
 
 export default function UpdatePassword() {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ export default function UpdatePassword() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [canUpdate, setCanUpdate] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     // If a normal user lands on this page, redirect them.
@@ -24,16 +25,20 @@ export default function UpdatePassword() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === "PASSWORD_RECOVERY") {
-          if (session) {
-            setCanUpdate(true);
-          } else {
-            setError(
-              "Invalid or expired password recovery link. Please try again.",
-            );
-          }
+          setSession(session);
+        } else {
+          // Clear session on other events to be safe
+          setSession(null);
         }
       },
     );
+
+    // Initial check in case the event was missed
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSession(session);
+      }
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -111,13 +116,13 @@ export default function UpdatePassword() {
           <div>
             <button
               type="submit"
-              disabled={!canUpdate || loading}
+              disabled={!session || loading}
               className="w-full py-3.5 rounded-full text-sm font-sans transition-all duration-200 disabled:opacity-50"
               style={{
                 backgroundColor: loading ? "#a3a89c" : "#1e3a20",
                 color: "#fff",
                 letterSpacing: "0.08em",
-                cursor: !canUpdate || loading ? "not-allowed" : "pointer",
+                cursor: !session || loading ? "not-allowed" : "pointer",
               }}
             >
               {loading ? "Updating..." : "Update Password"}

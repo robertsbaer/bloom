@@ -1,5 +1,5 @@
 // @ts-nocheck
-// v1.0.1
+// v1.0.2
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -13,13 +13,15 @@ serve(async (req) => {
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
 
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({
     type: "recovery",
     email: email,
-    redirectTo: "https://mybloom55.com/update-password",
+    options: {
+      redirectTo: "https://mybloom55.com/update-password",
+    },
   });
 
   if (error) {
@@ -41,7 +43,7 @@ serve(async (req) => {
         name: email, // Don't have name, use email
         link: link,
       },
-    },
+    }
   );
 
   if (sendError) {
@@ -51,11 +53,8 @@ serve(async (req) => {
     });
   }
 
-  return new Response(
-    JSON.stringify({ message: "Password reset email sent." }),
-    {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    },
-  );
+  return new Response(JSON.stringify({ message: "Password reset email sent." }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status: 200,
+  });
 });
