@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { supabase } from "./supabase";
 import { User } from "@supabase/supabase-js";
 import Checkout from "./Checkout";
@@ -33,6 +33,93 @@ interface CartItem {
   quantity: number;
 }
 
+interface StoredCartItem {
+  productId: number;
+  sizeLabel: string;
+  quantity: number;
+}
+
+const CART_STORAGE_KEY = "bloom55_cart";
+const MAX_CART_QUANTITY = 50;
+
+function buildCartItem(
+  product: Product,
+  sizeIndex: number,
+  quantity: number,
+): CartItem {
+  const size = product.sizes[sizeIndex];
+
+  return {
+    id: `${product.id}-${sizeIndex}`,
+    productId: product.id,
+    name: product.name,
+    shortName: product.shortName,
+    tagline: product.tagline,
+    price: size.price,
+    sizeLabel: size.label,
+    image: product.image,
+    quantity,
+  };
+}
+
+function loadStoredCart(): CartItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return [];
+
+    const stored = JSON.parse(raw) as StoredCartItem[];
+    if (!Array.isArray(stored)) return [];
+
+    return stored.flatMap((item) => {
+      if (
+        !Number.isInteger(item.productId) ||
+        typeof item.sizeLabel !== "string" ||
+        !Number.isInteger(item.quantity) ||
+        item.quantity < 1
+      ) {
+        return [];
+      }
+
+      const product = products.find((p) => p.id === item.productId);
+      const sizeIndex = product?.sizes.findIndex(
+        (size) => size.label === item.sizeLabel,
+      );
+
+      if (!product || sizeIndex == null || sizeIndex < 0) return [];
+
+      return buildCartItem(
+        product,
+        sizeIndex,
+        Math.min(item.quantity, MAX_CART_QUANTITY),
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredCart(cartItems: CartItem[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (cartItems.length === 0) {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+      return;
+    }
+
+    const stored: StoredCartItem[] = cartItems.map((item) => ({
+      productId: item.productId,
+      sizeLabel: item.sizeLabel,
+      quantity: item.quantity,
+    }));
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(stored));
+  } catch {
+    // Storage can be unavailable in private browsing or restricted contexts.
+  }
+}
+
 const inputCls =
   "w-full px-4 py-2.5 rounded-xl text-sm font-sans outline-none transition-all";
 const inputStyle = {
@@ -42,7 +129,7 @@ const inputStyle = {
 };
 
 export default function App() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(loadStoredCart);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -67,7 +154,7 @@ export default function App() {
     message: "",
   });
   const [contactSent, setContactSent] = useState(false);
-  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [, setContactSubmitting] = useState(false);
 
   // Report a problem modal
   const [reportOpen, setReportOpen] = useState(false);
@@ -81,7 +168,6 @@ export default function App() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -124,6 +210,10 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    saveStoredCart(cartItems);
+  }, [cartItems]);
+
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -142,27 +232,18 @@ export default function App() {
   }
 
   function addToCart(product: Product, sizeIndex: number) {
-    const size = product.sizes[sizeIndex];
     const itemId = `${product.id}-${sizeIndex}`;
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === itemId);
       if (existing)
         return prev.map((i) =>
-          i.id === itemId ? { ...i, quantity: i.quantity + 1 } : i,
+          i.id === itemId
+            ? { ...i, quantity: Math.min(i.quantity + 1, MAX_CART_QUANTITY) }
+            : i,
         );
       return [
         ...prev,
-        {
-          id: itemId,
-          productId: product.id,
-          name: product.name,
-          shortName: product.shortName,
-          tagline: product.tagline,
-          price: size.price,
-          sizeLabel: size.label,
-          image: product.image,
-          quantity: 1,
-        },
+        buildCartItem(product, sizeIndex, 1),
       ];
     });
     setAddedId(itemId);
@@ -174,7 +255,14 @@ export default function App() {
   function updateQuantity(id: string, delta: number) {
     setCartItems((prev) =>
       prev
-        .map((i) => (i.id === id ? { ...i, quantity: i.quantity + delta } : i))
+        .map((i) =>
+          i.id === id
+            ? {
+                ...i,
+                quantity: Math.min(i.quantity + delta, MAX_CART_QUANTITY),
+              }
+            : i,
+        )
         .filter((i) => i.quantity > 0),
     );
   }

@@ -20,7 +20,7 @@ export default function UpdatePassword() {
         } else if (event === "SIGNED_IN") {
           // This can happen if the user is already logged in.
           // We still want to allow password reset.
-          const { data, error } = await supabase.auth.getSession();
+          const { data } = await supabase.auth.getSession();
           if (data.session) {
             setSession(data.session);
           }
