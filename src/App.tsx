@@ -80,21 +80,29 @@ export default function App() {
   const [reportSent, setReportSent] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      if (user && user.email && user.email.endsWith("@mybloom55.com")) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
     };
     fetchUser();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null;
+      setUser(user);
+      if (user && user.email && user.email.endsWith("@mybloom55.com")) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => {
@@ -294,19 +302,21 @@ export default function App() {
                 >
                   Profile
                 </Link>
-                <Link
-                  to="/admin"
-                  className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
-                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.color = "#a07840")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.color = "#6b5c45")
-                  }
-                >
-                  Admin
-                </Link>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="text-xs uppercase transition-colors duration-200 font-sans whitespace-nowrap"
+                    style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.color = "#a07840")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.color = "#6b5c45")
+                    }
+                  >
+                    Admin
+                  </Link>
+                )}
 
                 <button
                   onClick={() => supabase.auth.signOut()}
@@ -478,14 +488,16 @@ export default function App() {
                 >
                   Profile
                 </Link>
-                <Link
-                  to="/admin"
-                  className="text-sm uppercase font-sans"
-                  style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Admin
-                </Link>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="text-sm uppercase font-sans"
+                    style={{ color: "#6b5c45", letterSpacing: "0.1em" }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Admin
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     supabase.auth.signOut();

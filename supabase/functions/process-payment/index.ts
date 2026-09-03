@@ -75,7 +75,6 @@ const CATALOG: Record<number, Record<string, number>> = {
   6: { "1 fl oz Airless Pump": 2500 }, // Midnight Bloom Serum
   7: { "1 fl oz Airless Pump": 2000 }, // Radiance Facial Moisturizer
   8: { "1 fl oz Airless Pump": 2000 }, // Radiance Lite Facial Moisturizer
-  8: { "1 fl oz Airless Pump": 2000 }, // Radiance Lite Facial Moisturizer
 };
 
 const PRODUCT_NAMES: Record<number, string> = {
@@ -87,8 +86,8 @@ const PRODUCT_NAMES: Record<number, string> = {
   5: "Bloom 5.5 Desert Veil Lip Balm",
   6: "Bloom 5.5 Midnight Bloom Serum",
   7: "Bloom 5.5 Radiance Facial Moisturizer",
-  8: "Bloom 5.5 Radiance Lite Facial Moisturizer",
-  8: "Bloom 5.5 Radiance Lite Facial Moisturizer",
+  8: "Bloom 5.5 Radiance Facial Moisturizer",
+  9: "Bloom 5.5 Radiance Lite Facial Moisturizer",
 };
 
 function json(body: unknown, status: number, origin: string | null) {
