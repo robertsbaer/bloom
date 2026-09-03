@@ -56,13 +56,22 @@ export default function CreateAccount() {
       setMessage("Account created successfully! Linking order...");
 
       // Send welcome email
-      await supabase.functions.invoke("send-smtp-email", {
-        body: {
-          type: "new-account",
-          email: data.user.email,
-          name: data.user.email, // Using email as name
+      const { error: emailError } = await supabase.functions.invoke(
+        "send-smtp-email",
+        {
+          body: {
+            type: "new-account",
+            email: data.user.email,
+            name: data.user.email, // Using email as name
+          },
         },
-      });
+      );
+
+      if (emailError) {
+        setError(`Error sending confirmation email: ${emailError.message}`);
+        setLoading(false);
+        return;
+      }
 
       const orderId = sessionStorage.getItem("pendingOrderId");
       if (orderId) {
