@@ -367,6 +367,27 @@ Deno.serve(async (req) => {
         `Failed to link order ${orderRow.id} to user ${userId}: ${updateError.message}`,
       );
     }
+  } else {
+    const { data: newUserAcct, error: createError } =
+      await supabase.auth.admin.createUser({
+        email: normalizedEmail,
+        email_confirm: true,
+      });
+    if (createError) {
+      console.error(
+        `Failed to create new user for order ${orderRow.id}: ${createError.message}`,
+      );
+    } else if (newUserAcct.user) {
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({ user_id: newUserAcct.user.id })
+        .eq("id", orderRow.id);
+      if (updateError) {
+        console.error(
+          `Failed to link order ${orderRow.id} to new user ${newUserAcct.user.id}: ${updateError.message}`,
+        );
+      }
+    }
   }
 
   // ── Send confirmation email ───────────────────────────────────────

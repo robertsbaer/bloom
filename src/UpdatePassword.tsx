@@ -13,32 +13,22 @@ export default function UpdatePassword() {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    // If a normal user lands on this page, redirect them.
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        navigate("/profile");
-      }
-    });
-
-    // This listener fires when the user lands on the page from the magic link.
-    // It establishes the recovery session.
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (event === "PASSWORD_RECOVERY") {
           setSession(session);
+        } else if (event === "SIGNED_IN") {
+          // This can happen if the user is already logged in.
+          // We still want to allow password reset.
+          const { data, error } = await supabase.auth.getSession();
+          if (data.session) {
+            setSession(data.session);
+          }
         } else {
-          // Clear session on other events to be safe
           setSession(null);
         }
       },
     );
-
-    // Initial check in case the event was missed
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session);
-      }
-    });
 
     return () => {
       authListener.subscription.unsubscribe();
