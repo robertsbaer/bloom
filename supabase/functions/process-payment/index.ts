@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
   const squareResponse = await fetch(`${squareBase}/v2/payments`, {
     method: "POST",
     headers: {
-      "Square-Version": "2024-10-17",
+      "Square-Version": "2026-08-19",
       Authorization: `Bearer ${squareToken}`,
       "Content-Type": "application/json",
     },
