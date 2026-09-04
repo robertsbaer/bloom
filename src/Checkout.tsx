@@ -248,7 +248,13 @@ export default function Checkout({
     setSubmitting(true);
     setErrorMsg(null);
     try {
+      // DIAGNOSTIC: Log the tokenization result
+      console.log("[DIAGNOSTIC] Calling card.tokenize()...");
       const result = await cardInstanceRef.current.tokenize();
+      // The full result object is safe to log. It does not contain raw card details.
+      // We need to inspect it for status, errors, and a potential verificationToken.
+      console.log("[DIAGNOSTIC] card.tokenize() full result:", result);
+
       if (result.status !== "OK" || !result.token) {
         const msg = result.errors?.[0]?.message ?? "Card details are invalid.";
         setErrorMsg(msg);
@@ -274,6 +280,8 @@ export default function Checkout({
         },
         body: JSON.stringify({
           sourceId: result.token,
+          // If 3DS verification happens, a verificationToken is returned and MUST be sent.
+          verificationToken: (result as any).verificationToken,
           idempotencyKey,
           email,
           phone: phone || undefined,

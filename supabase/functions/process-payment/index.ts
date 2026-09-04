@@ -52,6 +52,7 @@ interface IncomingAddress {
 
 interface PaymentRequest {
   sourceId: string; // tokenized card from Web Payments SDK
+  verificationToken?: string; // Optional 3DS verification token
   idempotencyKey: string; // client-generated UUID — required by Square
   email: string;
   phone?: string;
@@ -115,8 +116,7 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON" }, 400, origin);
   }
 
-  const { sourceId, idempotencyKey, email, phone, shipping, billing, items } =
-    body ?? {};
+  const { sourceId, idempotencyKey, email, phone, shipping, billing, items, verificationToken } = body ?? {};
   if (
     !sourceId ||
     !idempotencyKey ||
@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
     return json({ error: "Server not configured for payments" }, 500, origin);
   }
 
-  const paymentPayload = {
+  const paymentPayload: Record<string, any> = {
     source_id: sourceId,
     idempotency_key: idempotencyKey,
     amount_money: { amount: totalCents, currency: "USD" },
@@ -307,6 +307,10 @@ Deno.serve(async (req) => {
     note: `Bloom 5.5 order ${orderRow.id.slice(0, 8)}`,
   };
 
+  if (verificationToken) {
+    paymentPayload.verification_token = verificationToken;
+  }
+
   const squareResponse = await fetch(`${squareBase}/v2/payments`, {
     method: "POST",
     headers: {
@@ -320,6 +324,10 @@ Deno.serve(async (req) => {
   const squareData = await squareResponse.json();
 
   if (!squareResponse.ok || !squareData.payment) {
+    // DIAGNOSTIC: Log the full error response from Square.
+    // This is critical for understanding why the payment is failing.
+    console.error("[DIAGNOSTIC] Square API Error:", JSON.stringify(squareData, null, 2));
+
     const reason =
       squareData?.errors?.[0]?.detail ??
       squareData?.errors?.[0]?.code ??
