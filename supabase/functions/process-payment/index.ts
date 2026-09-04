@@ -100,6 +100,7 @@ function json(body: unknown, status: number, origin: string | null) {
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
+  console.log(`[DIAG] Received request from origin: ${origin}`);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(origin) });
@@ -109,12 +110,15 @@ Deno.serve(async (req) => {
   }
 
   // ── Parse + validate ────────────────────────────────────────────────
+  console.log("[DIAG] Step 1: Parsing request body...");
   let body: PaymentRequest;
   try {
     body = await req.json();
-  } catch {
+  } catch (e) {
+    console.error("[DIAG] ERROR: Invalid JSON.", e);
     return json({ error: "Invalid JSON" }, 400, origin);
   }
+  console.log("[DIAG] Step 1: Body parsed successfully.");
 
   const { sourceId, idempotencyKey, email, phone, shipping, billing, items, verificationToken } = body ?? {};
   if (
@@ -126,10 +130,13 @@ Deno.serve(async (req) => {
     !Array.isArray(items) ||
     items.length === 0
   ) {
+    console.error("[DIAG] ERROR: Missing required fields in body.");
     return json({ error: "Missing required fields" }, 400, origin);
   }
+  console.log("[DIAG] Step 2: Body validation passed.");
 
   // ── Recompute totals from server catalog (never trust the client) ───
+  console.log("[DIAG] Step 3: Recomputing order total from catalog...");
   let subtotalCents = 0;
   const lineItems: Array<{
     product_id: number;
@@ -142,16 +149,21 @@ Deno.serve(async (req) => {
 
   for (const it of items) {
     const productPrices = CATALOG[it.productId];
-    if (!productPrices)
+    if (!productPrices) {
+      console.error(`[DIAG] ERROR: Unknown product ID: ${it.productId}`);
       return json({ error: `Unknown product: ${it.productId}` }, 400, origin);
+    }
     const unit = productPrices[it.sizeLabel];
-    if (unit == null)
+    if (unit == null) {
+      console.error(`[DIAG] ERROR: Invalid size for product ${it.productId}: ${it.sizeLabel}`);
       return json(
         { error: `Invalid size for product ${it.productId}: ${it.sizeLabel}` },
         400,
         origin,
       );
+    }
     if (!Number.isInteger(it.quantity) || it.quantity < 1 || it.quantity > 50) {
+      console.error(`[DIAG] ERROR: Invalid quantity for product ${it.productId}: ${it.quantity}`);
       return json(
         { error: `Invalid quantity for product ${it.productId}` },
         400,
@@ -170,7 +182,11 @@ Deno.serve(async (req) => {
     });
   }
 
-  if (subtotalCents <= 0) return json({ error: "Empty cart" }, 400, origin);
+  if (subtotalCents <= 0) {
+    console.error("[DIAG] ERROR: Cart is empty, subtotal is 0.");
+    return json({ error: "Empty cart" }, 400, origin);
+  }
+  console.log(`[DIAG] Step 3: Total recomputed. Subtotal: ${subtotalCents}`);
 
   // ── Supabase admin client (service role, bypasses RLS) ──────────────
   const supabase = createClient(
@@ -178,10 +194,10 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     { auth: { persistSession: false } },
   );
+  console.log("[DIAG] Step 4: Supabase admin client created.");
 
   // ── First-purchase 10% discount logic ───────────────────────────────
-  // A customer counts as "first purchase" when no PAID order exists for
-  // that email yet.
+  console.log("[DIAG] Step 5: Checking for first-purchase discount...");
   const normalizedEmail = email.trim().toLowerCase();
   const { count: paidCount, error: countErr } = await supabase
     .from("orders")
@@ -190,18 +206,21 @@ Deno.serve(async (req) => {
     .ilike("email", normalizedEmail);
 
   if (countErr) {
+    console.error("[DIAG] ERROR: Database error checking for past orders.", countErr);
     return json(
       { error: "Database error", detail: countErr.message },
       500,
       origin,
     );
   }
+  console.log(`[DIAG] Step 5: Found ${paidCount} previous paid orders.`);
 
   const isFirstPurchase = (paidCount ?? 0) === 0;
   const discountCents = isFirstPurchase ? Math.round(subtotalCents * 0.1) : 0;
   const totalCents = subtotalCents - discountCents;
 
   // ── Insert pending order ────────────────────────────────────────────
+  console.log("[DIAG] Step 6: Inserting pending order into database...");
   const { data: orderRow, error: insertErr } = await supabase
     .from("orders")
     .insert({
@@ -232,12 +251,14 @@ Deno.serve(async (req) => {
     .single();
 
   if (insertErr || !orderRow) {
+    console.error("[DIAG] ERROR: Could not create order.", insertErr);
     return json(
       { error: "Could not create order", detail: insertErr?.message },
       500,
       origin,
     );
   }
+  console.log(`[DIAG] Step 6: Pending order ${orderRow.id} created.`);
 
   const itemsToInsert = lineItems.map((li) => ({
     order_id: orderRow.id,
@@ -247,6 +268,7 @@ Deno.serve(async (req) => {
     .from("order_items")
     .insert(itemsToInsert);
   if (itemsErr) {
+    console.error("[DIAG] ERROR: Could not save line items.", itemsErr);
     await supabase
       .from("orders")
       .update({ status: "Failed", failure_reason: itemsErr.message })
@@ -257,8 +279,10 @@ Deno.serve(async (req) => {
       origin,
     );
   }
+  console.log(`[DIAG] Step 7: Line items for order ${orderRow.id} inserted.`);
 
   // ── Charge card via Square ──────────────────────────────────────────
+  console.log("[DIAG] Step 8: Preparing to call Square API...");
   const squareEnv = (
     Deno.env.get("SQUARE_ENVIRONMENT") ?? "sandbox"
   ).toLowerCase();
@@ -270,6 +294,7 @@ Deno.serve(async (req) => {
   const squareLocation = Deno.env.get("SQUARE_LOCATION_ID");
 
   if (!squareToken || !squareLocation) {
+    console.error("[DIAG] ERROR: Missing Square secrets (token or location).");
     await supabase
       .from("orders")
       .update({ status: "Failed", failure_reason: "Missing Square config" })
@@ -310,7 +335,9 @@ Deno.serve(async (req) => {
   if (verificationToken) {
     paymentPayload.verification_token = verificationToken;
   }
+  console.log("[DIAG] Step 8: Square payment payload constructed.");
 
+  console.log("[DIAG] Step 9: Calling Square /v2/payments...");
   const squareResponse = await fetch(`${squareBase}/v2/payments`, {
     method: "POST",
     headers: {
@@ -324,8 +351,6 @@ Deno.serve(async (req) => {
   const squareData = await squareResponse.json();
 
   if (!squareResponse.ok || !squareData.payment) {
-    // DIAGNOSTIC: Log the full error response from Square.
-    // This is critical for understanding why the payment is failing.
     console.error("[DIAGNOSTIC] Square API Error:", JSON.stringify(squareData, null, 2));
 
     const reason =
@@ -338,9 +363,11 @@ Deno.serve(async (req) => {
       .eq("id", orderRow.id);
     return json({ error: reason, errors: squareData?.errors }, 402, origin);
   }
+  console.log("[DIAG] Step 9: Square API call successful.");
 
   const payment = squareData.payment;
 
+  console.log("[DIAG] Step 10: Updating order status to 'New Order'...");
   await supabase
     .from("orders")
     .update({
@@ -350,7 +377,10 @@ Deno.serve(async (req) => {
       square_receipt_url: payment.receipt_url ?? null,
     })
     .eq("id", orderRow.id);
+  console.log("[DIAG] Step 10: Order status updated.");
 
+  // ... (rest of the function remains the same)
+  
   // ── Find user and link to order if they exist ───────────────────
   const { data: existingUsers, error: listError } =
     await supabase.auth.admin.listUsers({
