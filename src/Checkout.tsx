@@ -251,61 +251,90 @@ export default function Checkout({
     setErrorMsg(null);
 
     try {
-      // DIAGNOSTIC: Log the tokenization result
-      console.log("[DIAGNOSTIC] Calling card.tokenize()...");
+      // 1. Tokenize
+      console.log("[DIAGNOSTIC] Step 1: Calling card.tokenize()...");
       const result = await cardInstanceRef.current.tokenize();
-      // The full result object is safe to log. It does not contain raw card details.
-      console.log("[DIAGNOSTIC] card.tokenize() full result:", result);
+      console.log("[DIAGNOSTIC] card.tokenize() full result:", {
+        status: result.status,
+        hasToken: !!result.token,
+        errors: result.errors,
+      });
 
       if (result.status !== "OK" || !result.token) {
+        console.error("[DIAGNOSTIC] card.tokenize() FAILED.");
         const msg = result.errors?.[0]?.message ?? "Card details are invalid.";
         setErrorMsg(msg);
         setSubmitting(false);
         return;
       }
+      console.log("[DIAGNOSTIC] Step 1: card.tokenize() SUCCEEDED.");
 
-      // SCA/3DS Step: Verify the buyer
-      const verificationDetails = {
-        amount: String(Math.round(cartTotal * 100)), // Amount in cents
-        billingContact: {
-          familyName: (billingSameAsShipping ? shipping : billing).name
-            .split(" ")
-            .slice(-1)[0],
-          givenName: (billingSameAsShipping ? shipping : billing).name
-            .split(" ")
-            .slice(0, -1)
-            .join(" "),
-          email: email,
-          country: (billingSameAsShipping ? shipping : billing).country || "US",
-          city: (billingSameAsShipping ? shipping : billing).city,
-          addressLines: [
-            (billingSameAsShipping ? shipping : billing).address1,
-            (billingSameAsShipping ? shipping : billing).address2,
-          ],
-          postalCode: (billingSameAsShipping ? shipping : billing).postalCode,
-          phone: phone || undefined,
-        },
-        intent: "CHARGE" as const,
-      };
+      // 2. Verify Buyer
+      let verificationResult: { token?: string } | null = null;
+      try {
+        const verificationDetails = {
+          amount: String(Math.round(cartTotal * 100)),
+          billingContact: {
+            familyName: (billingSameAsShipping ? shipping : billing).name
+              .split(" ")
+              .slice(-1)[0],
+            givenName: (billingSameAsShipping ? shipping : billing).name
+              .split(" ")
+              .slice(0, -1)
+              .join(" "),
+            email: email,
+            country: (billingSameAsShipping ? shipping : billing).country || "US",
+            city: (billingSameAsShipping ? shipping : billing).city,
+            addressLines: [
+              (billingSameAsShipping ? shipping : billing).address1,
+              (billingSameAsShipping ? shipping : billing).address2,
+            ],
+            postalCode: (billingSameAsShipping ? shipping : billing).postalCode,
+            phone: phone || undefined,
+          },
+          intent: "CHARGE" as const,
+        };
 
-      console.log("[DIAGNOSTIC] Calling payments.verifyBuyer()...");
-      const verificationResult = await paymentsRef.current.verifyBuyer(
-        result.token,
-        verificationDetails,
-      );
-      console.log(
-        "[DIAGNOSTIC] payments.verifyBuyer() result:",
-        verificationResult,
-      );
+        console.log(
+          "[DIAGNOSTIC] Step 2: Calling payments.verifyBuyer() with details:",
+          {
+            amount: verificationDetails.amount,
+            intent: verificationDetails.intent,
+            billingContact: {
+              familyName: !!verificationDetails.billingContact.familyName,
+              givenName: !!verificationDetails.billingContact.givenName,
+              email: !!verificationDetails.billingContact.email,
+              country: !!verificationDetails.billingContact.country,
+              city: !!verificationDetails.billingContact.city,
+              addressLines: !!verificationDetails.billingContact.addressLines,
+              postalCode: !!verificationDetails.billingContact.postalCode,
+            },
+          },
+        );
 
+        verificationResult = await paymentsRef.current.verifyBuyer(
+          result.token,
+          verificationDetails,
+        );
+
+        console.log("[DIAGNOSTIC] payments.verifyBuyer() SUCCEEDED. Result:", {
+          hasToken: !!verificationResult?.token,
+        });
+      } catch (error) {
+        console.error("[DIAGNOSTIC] Step 2: payments.verifyBuyer() FAILED.", error);
+        setErrorMsg(
+          error instanceof Error ? error.message : "Buyer verification failed.",
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      // 3. Process Payment
+      console.log("[DIAGNOSTIC] Step 3: Calling process-payment function...");
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
       const billingPayload = billingSameAsShipping ? shipping : billing;
-
-      const idempotencyKey =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? (crypto as Crypto).randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const idempotencyKey = crypto.randomUUID();
 
       const res = await fetch(`${supabaseUrl}/functions/v1/process-payment`, {
         method: "POST",
@@ -316,7 +345,6 @@ export default function Checkout({
         },
         body: JSON.stringify({
           sourceId: result.token,
-          // Use the token from the verification result for the backend call
           verificationToken: verificationResult?.token,
           idempotencyKey,
           email,
@@ -332,6 +360,11 @@ export default function Checkout({
       });
 
       const data = await res.json();
+      console.log("[DIAGNOSTIC] Step 3: process-payment response:", {
+        ok: res.ok,
+        status: res.status,
+        data,
+      });
 
       if (!res.ok) {
         setErrorMsg(data?.error ?? "Payment failed. Please try again.");
@@ -339,6 +372,8 @@ export default function Checkout({
         return;
       }
 
+      // 4. Handle Success
+      console.log("[DIAGNOSTIC] Step 4: Handling success...");
       setDiscountInfo({
         isFirstPurchase: !!data.isFirstPurchase,
         discountCents: data.discountCents ?? 0,
@@ -360,6 +395,7 @@ export default function Checkout({
         });
       }
     } catch (err: unknown) {
+      console.error("[DIAGNOSTIC] An unexpected error occurred in handlePay:", err);
       setErrorMsg(
         err instanceof Error
           ? err.message
