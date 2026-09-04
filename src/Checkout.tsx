@@ -14,6 +14,7 @@ interface SquareCard {
 }
 interface SquarePayments {
   card: (opts?: Record<string, unknown>) => Promise<SquareCard>;
+  verifyBuyer: (token: string, details: any) => Promise<{ token?: string } | null>;
 }
 interface SquareGlobal {
   payments: (appId: string, locationId: string) => SquarePayments;
@@ -244,15 +245,16 @@ export default function Checkout({
 
   // ── Submit payment ──────────────────────────────────────────────────
   async function handlePay() {
-    if (!cardInstanceRef.current) return;
+    if (!cardInstanceRef.current || !paymentsRef.current) return;
+
     setSubmitting(true);
     setErrorMsg(null);
+
     try {
       // DIAGNOSTIC: Log the tokenization result
       console.log("[DIAGNOSTIC] Calling card.tokenize()...");
       const result = await cardInstanceRef.current.tokenize();
       // The full result object is safe to log. It does not contain raw card details.
-      // We need to inspect it for status, errors, and a potential verificationToken.
       console.log("[DIAGNOSTIC] card.tokenize() full result:", result);
 
       if (result.status !== "OK" || !result.token) {
@@ -261,6 +263,40 @@ export default function Checkout({
         setSubmitting(false);
         return;
       }
+
+      // SCA/3DS Step: Verify the buyer
+      const verificationDetails = {
+        amount: String(Math.round(cartTotal * 100)), // Amount in cents
+        billingContact: {
+          familyName: (billingSameAsShipping ? shipping : billing).name
+            .split(" ")
+            .slice(-1)[0],
+          givenName: (billingSameAsShipping ? shipping : billing).name
+            .split(" ")
+            .slice(0, -1)
+            .join(" "),
+          email: email,
+          country: (billingSameAsShipping ? shipping : billing).country || "US",
+          city: (billingSameAsShipping ? shipping : billing).city,
+          addressLines: [
+            (billingSameAsShipping ? shipping : billing).address1,
+            (billingSameAsShipping ? shipping : billing).address2,
+          ],
+          postalCode: (billingSameAsShipping ? shipping : billing).postalCode,
+          phone: phone || undefined,
+        },
+        intent: "CHARGE" as const,
+      };
+
+      console.log("[DIAGNOSTIC] Calling payments.verifyBuyer()...");
+      const verificationResult = await paymentsRef.current.verifyBuyer(
+        result.token,
+        verificationDetails,
+      );
+      console.log(
+        "[DIAGNOSTIC] payments.verifyBuyer() result:",
+        verificationResult,
+      );
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -280,8 +316,8 @@ export default function Checkout({
         },
         body: JSON.stringify({
           sourceId: result.token,
-          // If 3DS verification happens, a verificationToken is returned and MUST be sent.
-          verificationToken: (result as any).verificationToken,
+          // Use the token from the verification result for the backend call
+          verificationToken: verificationResult?.token,
           idempotencyKey,
           email,
           phone: phone || undefined,
@@ -296,6 +332,7 @@ export default function Checkout({
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         setErrorMsg(data?.error ?? "Payment failed. Please try again.");
         setSubmitting(false);
