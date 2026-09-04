@@ -298,19 +298,7 @@ export default function Checkout({
 
         console.log(
           "[DIAGNOSTIC] Step 2: Calling payments.verifyBuyer() with details:",
-          {
-            amount: verificationDetails.amount,
-            intent: verificationDetails.intent,
-            billingContact: {
-              familyName: !!verificationDetails.billingContact.familyName,
-              givenName: !!verificationDetails.billingContact.givenName,
-              email: !!verificationDetails.billingContact.email,
-              countryCode: !!verificationDetails.billingContact.countryCode,
-              city: !!verificationDetails.billingContact.city,
-              addressLines: !!verificationDetails.billingContact.addressLines,
-              postalCode: !!verificationDetails.billingContact.postalCode,
-            },
-          },
+          JSON.stringify(verificationDetails, null, 2),
         );
 
         verificationResult = await paymentsRef.current.verifyBuyer(
