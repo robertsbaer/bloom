@@ -53,7 +53,7 @@ interface AddressForm {
   city: string;
   state: string;
   postalCode: string;
-  country: string;
+  countryCode: string;
 }
 
 const emptyAddr: AddressForm = {
@@ -63,7 +63,7 @@ const emptyAddr: AddressForm = {
   city: "",
   state: "",
   postalCode: "",
-  country: "US",
+  countryCode: "US",
 };
 
 const inputCls =
@@ -273,7 +273,9 @@ export default function Checkout({
       let verificationResult: { token?: string } | null = null;
       try {
         const verificationDetails = {
-          amount: String(Math.round(cartTotal * 100)),
+          amount: (cartTotal * 100).toFixed(0), // Amount in cents as a string
+          currencyCode: "USD", // Added missing currencyCode
+          intent: "CHARGE" as const,
           billingContact: {
             familyName: (billingSameAsShipping ? shipping : billing).name
               .split(" ")
@@ -283,7 +285,7 @@ export default function Checkout({
               .slice(0, -1)
               .join(" "),
             email: email,
-            country: (billingSameAsShipping ? shipping : billing).country || "US",
+            countryCode: (billingSameAsShipping ? shipping : billing).countryCode || "US", // Changed to countryCode
             city: (billingSameAsShipping ? shipping : billing).city,
             addressLines: [
               (billingSameAsShipping ? shipping : billing).address1,
@@ -292,7 +294,6 @@ export default function Checkout({
             postalCode: (billingSameAsShipping ? shipping : billing).postalCode,
             phone: phone || undefined,
           },
-          intent: "CHARGE" as const,
         };
 
         console.log(
@@ -304,7 +305,7 @@ export default function Checkout({
               familyName: !!verificationDetails.billingContact.familyName,
               givenName: !!verificationDetails.billingContact.givenName,
               email: !!verificationDetails.billingContact.email,
-              country: !!verificationDetails.billingContact.country,
+              countryCode: !!verificationDetails.billingContact.countryCode,
               city: !!verificationDetails.billingContact.city,
               addressLines: !!verificationDetails.billingContact.addressLines,
               postalCode: !!verificationDetails.billingContact.postalCode,
